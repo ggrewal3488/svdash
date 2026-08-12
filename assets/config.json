@@ -1,0 +1,36 @@
+{
+  "property": {
+    "name": "StayVista Residences",
+    "tagline": "Unlock Comfort, Every time!",
+    "location": "New Delhi, India"
+  },
+  "wifi": {
+    "network": "StayVista Residences",
+    "password": "liveathome@dlf3"
+  },
+  "breakfast": {
+    "startTime": "7:30 AM",
+    "endTime": "10:30 AM",
+    "venue": "Daily at the dining area",
+    "diningNote": "Experience the Finest Multi-Cuisine Dining on the 5th Floor"
+  },
+  "weather": {
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "enabled": true
+  },
+  "apps": [
+    { "key": "livetv",     "label": "Live TV"      },
+    { "key": "netflix",    "label": "Netflix"      },
+    { "key": "youtube",    "label": "YouTube"      },
+    { "key": "prime",      "label": "Prime Video"  },
+    { "key": "jiohotstar", "label": "JioHotstar"   },
+    { "key": "cast",       "label": "Cast"         },
+    { "key": "music",      "label": "Music"        },
+    { "key": "settings",   "label": "Information"  }
+  ],
+  "branding": {
+    "accentColor": "#C9A257",
+    "darkBg": "#0D0D0D"
+  }
+}

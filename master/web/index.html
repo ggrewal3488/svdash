@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StayVista Master</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <img src="logo.png" alt="StayVista" class="login-logo">
+        <h1>Master Dashboard</h1>
+        <form id="login-form">
+            <label>Username
+                <input type="text" id="login-username" autocomplete="username" required>
+            </label>
+            <label>Password
+                <input type="password" id="login-password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" id="login-btn">Sign In</button>
+            <div class="status error" id="login-error"></div>
+        </form>
+    </div>
+</div>
+
+<div id="dashboard" class="hidden">
+    <header id="topbar">
+        <img src="logo.png" alt="StayVista" class="topbar-logo">
+        <nav id="tabs">
+            <button class="tab-btn active" data-tab="update">Update</button>
+            <button class="tab-btn" data-tab="inhouse">In-House</button>
+            <button class="tab-btn admin-only hidden" data-tab="users">Users</button>
+        </nav>
+        <div id="user-info">
+            <span id="user-label"></span>
+            <button id="logout-btn">Log out</button>
+        </div>
+    </header>
+
+    <main>
+        <section id="tab-update" class="tab-panel">
+            <h2>Push Guest to Room</h2>
+            <form id="update-form">
+                <label>Room Number
+                    <input type="text" id="f-roomNo" inputmode="numeric" placeholder="e.g. 204" required>
+                </label>
+                <label>Salutation
+                    <select id="f-salutation">
+                        <option>Mr.</option>
+                        <option>Ms.</option>
+                        <option>Mr. &amp; Mrs.</option>
+                        <option>Dr.</option>
+                    </select>
+                </label>
+                <label>Last Name
+                    <input type="text" id="f-lastName">
+                </label>
+                <label>Check-in
+                    <input type="date" id="f-checkin">
+                </label>
+                <label>Check-out
+                    <input type="date" id="f-checkout">
+                </label>
+                <label>Message
+                    <textarea id="f-message" rows="2" placeholder="Shown on the TV welcome line"></textarea>
+                </label>
+                <button type="submit" id="push-btn">Push to Room</button>
+                <div class="status" id="update-status"></div>
+            </form>
+        </section>
+
+        <section id="tab-inhouse" class="tab-panel hidden">
+            <div class="panel-head">
+                <h2>In-House Guests</h2>
+                <button id="refresh-inhouse">Refresh</button>
+            </div>
+            <div id="inhouse-content"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="tab-users" class="tab-panel hidden">
+            <div class="panel-head">
+                <h2>Users</h2>
+                <button id="refresh-users">Refresh</button>
+            </div>
+            <table id="users-table">
+                <thead><tr><th>Username</th><th>Role</th><th>Created</th></tr></thead>
+                <tbody id="users-tbody"></tbody>
+            </table>
+
+            <h3>Add User</h3>
+            <form id="add-user-form">
+                <label>Username
+                    <input type="text" id="nu-username" required>
+                </label>
+                <label>Password
+                    <input type="password" id="nu-password" required minlength="6">
+                </label>
+                <label>Role
+                    <select id="nu-role">
+                        <option>User</option>
+                        <option>Admin</option>
+                    </select>
+                </label>
+                <button type="submit">Create User</button>
+                <div class="status" id="add-user-status"></div>
+            </form>
+        </section>
+    </main>
+</div>
+
+<div id="overwrite-modal" class="modal hidden">
+    <div class="modal-box">
+        <h3>Room Already Occupied</h3>
+        <p id="overwrite-detail"></p>
+        <label class="checkbox-row">
+            <input type="checkbox" id="overwrite-confirm-check">
+            Yes, overwrite this room's guest details
+        </label>
+        <div class="modal-actions">
+            <button type="button" id="overwrite-cancel" class="secondary">Cancel</button>
+            <button type="button" id="overwrite-confirm" disabled>Confirm &amp; Push</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

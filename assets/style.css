@@ -1,0 +1,281 @@
+/* ─────────────────────────────────────────────────────────────
+   STAYVISTA RESIDENCES — UNIVERSAL LUXURY TV DASHBOARD
+   Design: Architectural / Responsive / Flexible Scale
+───────────────────────────────────────────────────────────── */
+
+/* Local Fonts for Absolute Reliability */
+@font-face {
+    font-family: 'Larken';
+    src: url('fonts/Larken-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Larken';
+    src: url('fonts/Larken-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* ============================================================
+   BASE & TYPOGRAPHY
+============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 1.1vw;
+}
+
+/* ============================================================
+   ANIMATIONS
+============================================================ */
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(2vh); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   MAIN WRAPPER
+============================================================ */
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: #000 url('background.png') no-repeat center center;
+    background-size: cover;
+}
+
+#app::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at top right, rgba(201,162,87,0.08) 0%, transparent 40%),
+                linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 100%);
+    z-index: 1;
+}
+
+#app > * { position: relative; z-index: 2; }
+
+/* ============================================================
+   TOP BAR
+============================================================ */
+#topbar {
+    height: 15vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5vw;
+}
+
+#logo-img {
+    height: 7vh;
+    width: auto;
+}
+
+#weather-clock {
+    display: flex;
+    align-items: center;
+}
+
+#weather-widget { text-align: right; margin-right: 3vw; }
+#weather-temp { font-size: 4vh; font-weight: 200; letter-spacing: -1px; color: #FFF; }
+#weather-desc { font-size: 1.2vh; color: #C9A257; text-transform: uppercase; letter-spacing: 0.2vw; }
+
+#clock-widget { text-align: left; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 3vw; }
+#clock-time { font-size: 4vh; font-weight: 400; letter-spacing: -1px; }
+#clock-time .ampm { font-size: 1.8vh; color: #C9A257; margin-left: 0.5vw; }
+#clock-date { font-size: 1.2vh; color: #999; text-transform: uppercase; letter-spacing: 0.2vw; margin-top: 0.5vh; }
+
+/* ============================================================
+   CONTENT AREA
+============================================================ */
+#main {
+    flex: 1;
+    display: flex;
+    padding: 0 5vw 4vh 5vw;
+    gap: 4vw;
+    animation: fadeIn 1.2s ease-out;
+}
+
+#left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* WELCOME SECTION */
+#welcome { margin-bottom: 5vh; }
+#welcome .pre {
+    color: #C9A257;
+    font-size: 1.5vh;
+    text-transform: uppercase;
+    letter-spacing: 0.5vw;
+    margin-bottom: 1.5vh;
+}
+#welcome .name {
+    font-family: 'Larken', serif;
+    font-size: 8vh;
+    font-weight: 700;
+    margin-bottom: 2vh;
+    line-height: 1;
+    background: linear-gradient(90deg, #FFFFFF 0%, #C9A257 50%, #FFFFFF 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 10s linear infinite;
+}
+#welcome .tagline {
+    font-size: 2.5vh;
+    color: #AAA;
+    font-weight: 200;
+    font-style: italic;
+    font-family: 'Larken', serif;
+}
+
+/* CARDS */
+#card-row {
+    display: flex;
+    gap: 2vw;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 2vw;
+    padding: 3vw;
+    flex: 1;
+    backdrop-filter: blur(30px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 35vh;
+}
+
+.card-title {
+    color: #C9A257;
+    font-size: 1.2vh;
+    font-weight: 600;
+    margin-bottom: 3vh;
+    text-transform: uppercase;
+    letter-spacing: 0.3vw;
+    text-align: center;
+}
+
+#wifi-qr-img {
+    width: 10vw;
+    height: 10vw;
+    max-width: 15vh;
+    max-height: 15vh;
+    background: #FFF;
+    padding: 0.8vw;
+    border-radius: 1vw;
+    display: block;
+    margin: 0 auto 2vh auto;
+}
+
+.wifi-cred { text-align: center; }
+.wifi-cred .label { font-size: 1vh; color: #777; text-transform: uppercase; letter-spacing: 0.15vw; margin-bottom: 0.5vh; }
+.wifi-cred .value { font-size: 2vh; color: #FFF; font-weight: 400; margin-bottom: 1.5vh; }
+
+/* RESTAURANT CARD (CENTER) */
+.restaurant-card {
+    align-items: center;
+    text-align: center;
+}
+.res-logo {
+    width: 20vw;
+    height: auto;
+    margin-bottom: 2vh;
+    filter: drop-shadow(0 0 15px rgba(201, 162, 87, 0.4));
+}
+.res-tagline {
+    font-family: 'Larken', serif;
+    font-size: 2.2vh;
+    line-height: 1.4;
+    color: #EEE;
+    font-style: italic;
+    max-width: 90%;
+}
+
+/* ============================================================
+   RIGHT PANEL
+============================================================ */
+#right-panel {
+    width: 22vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#need-something-img {
+    width: 100%;
+    height: auto;
+    border-radius: 3vw;
+    border: 1px solid rgba(201, 162, 87, 0.2);
+}
+
+/* ============================================================
+   DOCK
+============================================================ */
+#app-row {
+    height: 18vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    padding: 0 5vw 2vh 5vw;
+    backdrop-filter: blur(40px);
+}
+
+.app-btn {
+    width: 10vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: 0 0.5vw;
+    opacity: 0.6;
+}
+
+.app-icon-img {
+    width: 6vh;
+    height: 6vh;
+    object-fit: contain;
+    margin-bottom: 1.5vh;
+    filter: saturate(0.5);
+}
+
+.app-btn span {
+    font-size: 1.2vh;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.15vw;
+}
+
+.app-btn:focus, .app-btn.active-btn {
+    opacity: 1;
+    transform: scale(1.1) translateY(-1vh);
+}
+
+.app-btn:focus span, .app-btn.active-btn span {
+    color: #C9A257;
+    font-weight: 600;
+}

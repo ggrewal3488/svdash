@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>StayVista Universal Luxury</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+    <header id="topbar">
+        <div id="logo">
+            <img id="logo-img" src="logo.png" alt="StayVista">
+        </div>
+
+        <div id="weather-clock">
+            <div id="weather-widget">
+                <div id="weather-temp">--°C</div>
+                <div id="weather-desc">LOADING</div>
+            </div>
+
+            <div id="clock-widget">
+                <div id="clock-time">00:00 <span class="ampm">AM</span></div>
+                <div id="clock-date">LOADING...</div>
+            </div>
+        </div>
+    </header>
+
+    <main id="main">
+        <section id="left-panel">
+            <section id="welcome">
+                <div class="pre">Your Private Sanctuary</div>
+                <div class="name" id="welcome-name">StayVista Residences</div>
+                <div class="tagline" id="welcome-tagline">Where Elegance Meets Comfort</div>
+            </section>
+
+            <section id="card-row">
+                <article id="card-wifi" class="card">
+                    <div class="card-title">Secure Connectivity</div>
+                    <img id="wifi-qr-img" src="wifi_qr.png" alt="WiFi QR">
+                    <div class="wifi-cred">
+                        <div class="label">Private Network</div>
+                        <div id="wifi-network" class="value">StayVista_Guest</div>
+                        <div class="label">Access Key</div>
+                        <div id="wifi-password" class="value">luxury@stay</div>
+                    </div>
+                </article>
+
+                <!-- NEW RESTAURANT CARD -->
+                <article id="card-restaurant" class="card restaurant-card">
+                    <img src="tdr.png" class="res-logo" alt="The Dining Room">
+                    <div class="res-tagline">Experience a world of flavours, just levels away on level 5</div>
+                </article>
+            </section>
+        </section>
+
+        <aside id="right-panel">
+            <img id="need-something-img" src="need_something.png" alt="Concierge">
+        </aside>
+    </main>
+
+    <nav id="app-row">
+        <!-- Apps dynamically injected by script.js -->
+    </nav>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>

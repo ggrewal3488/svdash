@@ -1,0 +1,68 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.stayvista.svdash'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.stayvista.svdash"
+        minSdk 19
+        targetSdk 34
+        // Before tagging a release: bump versionCode (integer, always up)
+        // and versionName, commit, then tag the release "v<versionCode>"
+        // (e.g. versionCode 4 -> tag v4). UpdateManager compares the GitHub
+        // release tag directly against the installed versionCode.
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    // Populated from -PKEYSTORE_FILE / -PSTORE_PASSWORD / -PKEY_ALIAS /
+    // -PKEY_PASSWORD (see .github/workflows/android.yml). Left unset for a
+    // plain local `assembleDebug`, which doesn't need it.
+    def hasReleaseSigning = project.hasProperty('KEYSTORE_FILE')
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(project.property('KEYSTORE_FILE'))
+                storePassword project.property('STORE_PASSWORD')
+                keyAlias project.property('KEY_ALIAS')
+                keyPassword project.property('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    androidResources {
+        noCompress 'html', 'css', 'js', 'json', 'jpg', 'png', 'svg', 'ttf'
+    }
+
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.4.2'
+    implementation 'androidx.core:core-ktx:1.13.1'
+}

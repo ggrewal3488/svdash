@@ -1,0 +1,101 @@
+name: Build SVDash APK
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:     [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:       # Allow manual trigger from GitHub UI
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Java 17 (required for AGP 8.x) ─────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # ── 3. Gradle wrapper permissions ──────────────────────
+      - name: Grant gradlew execute permission
+        run: chmod +x gradlew
+
+      # ── 4. Cache Gradle dependencies ───────────────────────
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      # ── 5. Build DEBUG APK (always) ────────────────────────
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: svdash-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      # ── 6. Build RELEASE APK (only on version tags) ────────
+      - name: Decode keystore
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/keystore.jks
+
+      - name: Build release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -PKEYSTORE_FILE=${{ github.workspace }}/keystore.jks \
+            -PSTORE_PASSWORD=${{ secrets.STORE_PASSWORD }} \
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+            -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: svdash-release-${{ github.ref_name }}
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+
+      # ── 7. Create GitHub Release with APK attached ─────────
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SVDash ${{ github.ref_name }}
+          body: |
+            ## SVDash ${{ github.ref_name }}
+
+            Hotel TV dashboard launcher for StayVista Residences.
+
+            ### Install
+            ```
+            adb install app-release.apk
+            ```
+            Or sideload via USB / file manager on the TV box.
+
+            ### What's in this release
+            - See commit history for changes since last tag.
+          files: app/build/outputs/apk/release/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
