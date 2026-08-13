@@ -8,6 +8,11 @@ on:
     branches: [ main ]
   workflow_dispatch:       # Allow manual trigger from GitHub UI
 
+# Repo-default GITHUB_TOKEN is read-only on repos created after Feb 2023;
+# the release job needs write access to create a GitHub Release.
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build APK
