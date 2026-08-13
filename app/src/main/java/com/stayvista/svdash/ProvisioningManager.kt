@@ -58,7 +58,7 @@ object ProvisioningManager {
         return IP_ROOM_MAP[ip]
     }
 
-    private fun getLocalIpAddress(): String? {
+    fun getLocalIpAddress(): String? {
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces()
             while (interfaces.hasMoreElements()) {

@@ -25,6 +25,7 @@ function init() {
     startClock();
     renderApps();
     checkRoomSetup();
+    renderDeviceInfo();
 
     loadConfig(function(config) {
         CFG = config || {};
@@ -48,6 +49,34 @@ function checkRoomSetup() {
     var room = "";
     try { room = window.Android.getRoomNumber(); } catch (e) {}
     if (!room) showRoomSetup();
+}
+
+function renderDeviceInfo() {
+    var el = document.getElementById("device-info");
+    if (!el || !window.Android) return;
+
+    var room = "";
+    var ip = "";
+
+    try {
+        if (typeof window.Android.getRoomNumber === 'function') {
+            room = window.Android.getRoomNumber();
+        }
+        if (typeof window.Android.getIpAddress === 'function') {
+            ip = window.Android.getIpAddress();
+        }
+    } catch (e) {}
+
+    if (room || ip) {
+        var text = "";
+        if (room) text += "R" + room;
+        if (room && ip) text += "  |  ";
+        if (ip) text += ip;
+        el.textContent = text;
+    } else {
+        // Retry once after 2 seconds if both are empty (bridge/network might be slow)
+        setTimeout(renderDeviceInfo, 2000);
+    }
 }
 
 function showRoomSetup() {

@@ -345,6 +345,22 @@ html, body {
 }
 
 /* ============================================================
+   DEVICE INFO (Bottom Left)
+============================================================ */
+#device-info {
+    position: absolute;
+    bottom: 5vh;
+    left: 5vw;
+    font-size: 1.8vh;
+    color: rgba(201, 162, 87, 0.7);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.1vw;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    z-index: 90;
+}
+
+/* ============================================================
    ROOM SETUP OVERLAY (one-time per-TV provisioning)
 ============================================================ */
 #room-setup {

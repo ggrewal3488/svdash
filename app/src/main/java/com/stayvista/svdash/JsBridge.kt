@@ -91,6 +91,11 @@ class JsBridge(private val context: Context) {
     }
 
     @android.webkit.JavascriptInterface
+    fun getIpAddress(): String {
+        return ProvisioningManager.getLocalIpAddress() ?: ""
+    }
+
+    @android.webkit.JavascriptInterface
     fun launchApp(appKey: String) {
         val key = appKey.lowercase()
         AppLauncher.launch(context, key)
