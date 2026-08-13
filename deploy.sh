@@ -40,11 +40,8 @@ else
 fi
 ACTIVITY="$PKG/com.stayvista.svdash.MainActivity"
 
-# room  ip   (see MEMORY: tv-room-ip-map)
-# NOTE: this table only covers floor 1 (101-108). ProvisioningManager.kt's
-# IP_ROOM_MAP covers 101-109/201-209/301-309/401-409 (35 rooms) -- sync this
-# list with that map before running a property-wide cutover, unless floors
-# 2-4 are intentionally not live yet.
+# room  ip   (see MEMORY: tv-room-ip-map; kept in sync with
+# ProvisioningManager.IP_ROOM_MAP -- update both together)
 ROOMS="\
 101 192.168.10.17
 102 192.168.10.18
@@ -53,7 +50,34 @@ ROOMS="\
 105 192.168.10.21
 106 192.168.10.22
 107 192.168.10.23
-108 192.168.10.24"
+108 192.168.10.24
+109 192.168.10.25
+201 192.168.10.26
+203 192.168.10.28
+204 192.168.10.29
+205 192.168.10.30
+206 192.168.10.31
+207 192.168.10.32
+208 192.168.10.33
+209 192.168.10.34
+301 192.168.10.35
+302 192.168.10.36
+303 192.168.10.37
+304 192.168.10.38
+305 192.168.10.39
+306 192.168.10.40
+307 192.168.10.41
+308 192.168.10.42
+309 192.168.10.43
+401 192.168.10.44
+402 192.168.10.45
+403 192.168.10.50
+404 192.168.10.47
+405 192.168.10.48
+406 192.168.10.27
+407 192.168.10.46
+408 192.168.10.51
+409 192.168.10.52"
 
 [ -x "$ADB" ] || { echo "adb not found/executable at: $ADB"; exit 1; }
 [ -f "$APK" ] || { echo "APK not found: $APK  (build it first)"; exit 1; }
