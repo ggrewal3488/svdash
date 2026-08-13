@@ -40,8 +40,7 @@ object UpdateManager {
 
     private const val TAG = "SVDashUpdater"
 
-    // TODO: fill in once the repo has a real GitHub remote.
-    private const val GITHUB_OWNER = "YOUR_GITHUB_ORG_OR_USER"
+    private const val GITHUB_OWNER = "ggrewal3488"
     private const val GITHUB_REPO = "svdash"
     private const val LATEST_RELEASE_URL =
         "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
