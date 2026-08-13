@@ -349,10 +349,10 @@ html, body {
 ============================================================ */
 #device-info {
     position: absolute;
-    bottom: 5vh;
+    bottom: 0.6vh;
     left: 5vw;
-    font-size: 1.8vh;
-    color: rgba(201, 162, 87, 0.7);
+    font-size: 1.3vh;
+    color: rgba(201, 162, 87, 0.55);
     font-family: 'Inter', sans-serif;
     letter-spacing: 0.1vw;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
