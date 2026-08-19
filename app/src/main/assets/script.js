@@ -26,6 +26,7 @@ function init() {
     renderApps();
     checkRoomSetup();
     renderDeviceInfo();
+    initPromoCarousel();
 
     loadConfig(function(config) {
         CFG = config || {};
@@ -77,6 +78,56 @@ function renderDeviceInfo() {
         // Retry once after 2 seconds if both are empty (bridge/network might be slow)
         setTimeout(renderDeviceInfo, 2000);
     }
+}
+
+/* ----- Center card promo carousel -----
+ * Logo slide is always the first slide (already in index.html, class
+ * "active"). Any promos pushed from Master are appended after it and the
+ * whole set loops: logo -> promo 1 -> ... -> promo N -> logo -> ...
+ * No promos synced yet (or bridge unavailable) -> no interval starts, card
+ * just stays on the logo slide exactly like before this feature existed.
+ */
+var PROMO_SLIDE_MS = 8000;
+
+function initPromoCarousel() {
+    if (!(window.Android && typeof window.Android.getPromos === 'function')) return;
+
+    var promos;
+    try {
+        promos = JSON.parse(window.Android.getPromos() || "[]");
+    } catch (e) {
+        promos = [];
+    }
+    if (!promos.length) return;
+
+    var container = document.getElementById("promo-dynamic-slides");
+    if (!container) return;
+
+    container.innerHTML = "";
+    promos.forEach(function (promo) {
+        var slide = document.createElement("div");
+        slide.className = "promo-slide";
+        slide.dataset.promoId = promo.id;
+
+        var img = document.createElement("img");
+        img.className = "promo-image";
+        img.src = promo.path;
+        img.alt = "Promotion";
+
+        slide.appendChild(img);
+        container.appendChild(slide);
+    });
+
+    var slides = document.querySelectorAll("#promo-carousel .promo-slide");
+    if (slides.length < 2) return; // just the logo -- nothing to rotate to
+
+    var current = 0;
+    setInterval(function () {
+        var next = (current + 1) % slides.length;
+        slides[current].classList.remove("active");
+        slides[next].classList.add("active");
+        current = next;
+    }, PROMO_SLIDE_MS);
 }
 
 function showRoomSetup() {

@@ -119,6 +119,8 @@ function wireDashboard() {
     document.getElementById("refresh-inhouse").addEventListener("click", loadInHouse);
     document.getElementById("refresh-users").addEventListener("click", loadUsers);
     document.getElementById("add-user-form").addEventListener("submit", onAddUserSubmit);
+    document.getElementById("refresh-promos").addEventListener("click", loadPromos);
+    document.getElementById("promo-file-input").addEventListener("change", onPromoFileSelected);
 }
 
 function switchTab(name) {
@@ -130,6 +132,7 @@ function switchTab(name) {
     });
     if (name === "inhouse") loadInHouse();
     if (name === "users") loadUsers();
+    if (name === "content") loadPromos();
 }
 
 /* ----- Update tab ----- */
@@ -265,6 +268,106 @@ function renderInHouse(rooms) {
     });
 
     content.innerHTML = html;
+}
+
+/* ----- Content tab (center card promos) ----- */
+var PROMO_MAX_BYTES = 5 * 1024 * 1024;
+var PROMO_ALLOWED_TYPES = ["image/jpeg", "image/png"];
+var PROMO_MAX_ACTIVE = 5;
+
+function loadPromos() {
+    var grid = document.getElementById("promo-grid");
+    grid.innerHTML = '<p class="muted">Loading…</p>';
+
+    apiGet({ action: "getPromos" }).then(function (res) {
+        renderPromoGrid(res.promos || []);
+    }).catch(function () {
+        grid.innerHTML = '<p class="status error">Could not load content</p>';
+    });
+}
+
+function renderPromoGrid(promos) {
+    var grid = document.getElementById("promo-grid");
+    var fileInput = document.getElementById("promo-file-input");
+
+    if (promos.length === 0) {
+        grid.innerHTML = '<p class="muted">No promotional images yet — the card just shows the Drawing Room logo.</p>';
+    } else {
+        grid.innerHTML = promos.map(function (p) {
+            return '<div class="promo-card">' +
+                '<img src="' + encodeURI(p.url) + '" alt="Promo">' +
+                '<div class="promo-card-footer">' +
+                '<span class="muted">#' + p.order + '</span>' +
+                '<button type="button" class="promo-delete-btn" data-id="' + escapeHtml(p.id) + '">Delete</button>' +
+                '</div></div>';
+        }).join("");
+
+        grid.querySelectorAll(".promo-delete-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () { onDeletePromo(btn.dataset.id); });
+        });
+    }
+
+    fileInput.disabled = promos.length >= PROMO_MAX_ACTIVE;
+}
+
+function onPromoFileSelected(e) {
+    var file = e.target.files[0];
+    var statusEl = document.getElementById("promo-status");
+    if (!file) return;
+
+    if (PROMO_ALLOWED_TYPES.indexOf(file.type) === -1) {
+        setStatus(statusEl, "Only JPG or PNG images are allowed", "error");
+        e.target.value = "";
+        return;
+    }
+    if (file.size > PROMO_MAX_BYTES) {
+        setStatus(statusEl, "Image exceeds the 5MB size limit", "error");
+        e.target.value = "";
+        return;
+    }
+
+    setStatus(statusEl, "Uploading…", "");
+    var reader = new FileReader();
+    reader.onload = function () {
+        var dataUrl = reader.result;
+        var base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+        apiPost({
+            action: "pushPromo",
+            token: session.token,
+            imageBase64: base64,
+            mimeType: file.type,
+            filename: file.name
+        }).then(function (res) {
+            if (res.ok) {
+                setStatus(statusEl, "Uploaded", "ok");
+                loadPromos();
+            } else {
+                setStatus(statusEl, res.error || "Upload failed", "error");
+            }
+        }).catch(function () {
+            setStatus(statusEl, "Network error — try again", "error");
+        }).finally(function () { e.target.value = ""; });
+    };
+    reader.onerror = function () {
+        setStatus(statusEl, "Could not read file", "error");
+        e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+}
+
+function onDeletePromo(id) {
+    var statusEl = document.getElementById("promo-status");
+    setStatus(statusEl, "Deleting…", "");
+    apiPost({ action: "deletePromo", token: session.token, id: id }).then(function (res) {
+        if (res.ok) {
+            setStatus(statusEl, "Deleted", "ok");
+            loadPromos();
+        } else {
+            setStatus(statusEl, res.error || "Delete failed", "error");
+        }
+    }).catch(function () {
+        setStatus(statusEl, "Network error — try again", "error");
+    });
 }
 
 /* ----- Users tab (admin only) ----- */

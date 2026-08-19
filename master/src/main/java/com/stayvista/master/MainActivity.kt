@@ -22,6 +22,7 @@ class MainActivity : AppCompatActivity() {
                 val fragment = when (tab?.position) {
                     0 -> UpdateFragment()
                     1 -> InHouseFragment()
+                    2 -> ContentFragment()
                     else -> UpdateFragment()
                 }
                 supportFragmentManager.beginTransaction()

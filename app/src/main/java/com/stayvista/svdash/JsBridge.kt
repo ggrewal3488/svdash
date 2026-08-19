@@ -171,6 +171,15 @@ class JsBridge(private val context: Context) {
         }
     }
 
+    /**
+     * Returns the locally cached promo images (synced by [PromoManager]) as a
+     * JSON array of {id, path}, ordered for the center-card carousel.
+     */
+    @android.webkit.JavascriptInterface
+    fun getPromos(): String {
+        return PromoManager.getCachedPromosJson(context)
+    }
+
     @android.webkit.JavascriptInterface
     fun readAsset(filename: String): String {
         // Try remote config first

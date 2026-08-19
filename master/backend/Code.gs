@@ -23,8 +23,11 @@
  *   GET  ?room=<no>                   -> one room's guest data, unauthenticated
  *   GET  ?action=verify&token=...     -> { ok, username, role }
  *   GET  ?action=listUsers&token=...  -> admin only
+ *   GET  ?action=getPromos            -> active promo images (id, url, hash, order), unauthenticated
  *   POST { action: 'login', ... }
  *   POST { action: 'createUser', ... } -> admin only
+ *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
+ *   POST { action: 'deletePromo', id, token? } -> remove a promo image
  *   POST { roomNo, ... }              -> push/overwrite a room's guest (action omitted or 'pushGuest')
  */
 
@@ -43,6 +46,9 @@ function doGet(e) {
       var admin = requireAdmin_(params.token);
       if (!admin.ok) return json_(admin);
       return json_({ ok: true, users: listUsers_() });
+    }
+    if (params.action === 'getPromos') {
+      return json_({ ok: true, promos: getPromosJson_() });
     }
     if (params.room === 'ALL') {
       return json_(getAllRoomsJson_());
@@ -70,6 +76,10 @@ function doPost(e) {
         return json_(login_(body.username, body.password));
       case 'createUser':
         return json_(createUser_(body));
+      case 'pushPromo':
+        return json_(pushPromo_(body));
+      case 'deletePromo':
+        return json_(deletePromo_(body));
       default:
         return json_(pushGuest_(body));
     }
@@ -156,6 +166,109 @@ function getRoomJson_(roomNo) {
     }
   }
   return { roomNo: roomNo };
+}
+
+/* ----- Promos ----- */
+
+var MAX_ACTIVE_PROMOS = 5;
+var MAX_PROMO_BYTES = 5 * 1024 * 1024; // 5MB
+var ALLOWED_PROMO_MIME_TYPES = ['image/jpeg', 'image/png'];
+
+function pushPromo_(body) {
+  var session = body.token ? verifyToken_(body.token) : null;
+  if (body.token && !session) return { ok: false, error: 'Invalid or expired session' };
+
+  var mimeType = String(body.mimeType || '').toLowerCase();
+  if (ALLOWED_PROMO_MIME_TYPES.indexOf(mimeType) === -1) {
+    return { ok: false, error: 'Image must be JPG or PNG' };
+  }
+
+  var base64 = String(body.imageBase64 || '');
+  if (!base64) return { ok: false, error: 'imageBase64 is required' };
+
+  var bytes;
+  try {
+    bytes = Utilities.base64Decode(base64);
+  } catch (err) {
+    return { ok: false, error: 'imageBase64 is not valid base64' };
+  }
+  if (bytes.length > MAX_PROMO_BYTES) {
+    return { ok: false, error: 'Image exceeds the 5MB size limit' };
+  }
+
+  var sheet = promosSheet_();
+  var data = sheet.getDataRange().getValues();
+  var activeCount = 0;
+  var maxOrder = 0;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][7] === true) activeCount++;
+    var order = Number(data[i][2]) || 0;
+    if (order > maxOrder) maxOrder = order;
+  }
+  if (activeCount >= MAX_ACTIVE_PROMOS) {
+    return { ok: false, error: 'Maximum of 5 promotional images already uploaded — delete one first' };
+  }
+
+  var filename = String(body.filename || 'promo') + '-' + new Date().getTime();
+  var blob = Utilities.newBlob(bytes, mimeType, filename);
+  var file = promosFolder_().createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  var id = file.getId();
+  var url = 'https://drive.google.com/uc?export=view&id=' + id;
+  var hash = bytesToHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, bytes));
+  var uploadedBy = session ? session.username : 'master-app';
+
+  sheet.appendRow([id, url, maxOrder + 1, hash, mimeType, uploadedBy, new Date().toISOString(), true]);
+  return { ok: true, id: id, url: url };
+}
+
+function deletePromo_(body) {
+  var session = body.token ? verifyToken_(body.token) : null;
+  if (body.token && !session) return { ok: false, error: 'Invalid or expired session' };
+
+  var id = String(body.id || '').trim();
+  if (!id) return { ok: false, error: 'id is required' };
+
+  var sheet = promosSheet_();
+  var data = sheet.getDataRange().getValues();
+  var rowIndex = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === id) { rowIndex = i + 1; break; }
+  }
+  if (rowIndex === -1) return { ok: false, error: 'Promo not found' };
+
+  sheet.deleteRow(rowIndex);
+  try {
+    DriveApp.getFileById(id).setTrashed(true);
+  } catch (err) {
+    // File may already be gone from Drive; the sheet row is the source of truth.
+  }
+  return { ok: true };
+}
+
+function getPromosJson_() {
+  var sheet = promosSheet_();
+  var data = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[7] !== true) continue; // active only
+    out.push({ id: row[0], url: row[1], order: Number(row[2]) || 0, hash: row[3] });
+  }
+  out.sort(function (a, b) { return a.order - b.order; });
+  return out.slice(0, MAX_ACTIVE_PROMOS);
+}
+
+function promosFolder_() {
+  var name = 'SVDash Promos';
+  var folders = DriveApp.getFoldersByName(name);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(name);
+}
+
+function promosSheet_() {
+  return getOrCreateSheet_('Promos', ['Id', 'Url', 'Order', 'Hash', 'MimeType', 'UploadedBy', 'UploadedAt', 'Active']);
 }
 
 /* ----- Auth / users ----- */

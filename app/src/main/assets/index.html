@@ -52,10 +52,15 @@
                     </div>
                 </article>
 
-                <!-- NEW RESTAURANT CARD -->
+                <!-- CENTER CARD: rotates the Drawing Room logo with any promos pushed from Master -->
                 <article id="card-restaurant" class="card restaurant-card">
-                    <img src="tdr.png" class="res-logo" alt="The Dining Room">
-                    <div class="res-tagline">Experience a world of flavours, just levels away on level 5</div>
+                    <div id="promo-carousel">
+                        <div class="promo-slide active" id="promo-slide-logo">
+                            <img src="tdr.png" class="res-logo" alt="The Dining Room">
+                            <div class="res-tagline">Experience a world of flavours, just levels away on level 5</div>
+                        </div>
+                        <div id="promo-dynamic-slides"></div>
+                    </div>
                 </article>
             </section>
         </section>

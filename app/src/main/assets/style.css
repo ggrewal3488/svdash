@@ -259,10 +259,33 @@ html, body {
 .wifi-cred .label { font-size: 1vh; color: #777; text-transform: uppercase; letter-spacing: 0.15vw; margin-bottom: 0.5vh; }
 .wifi-cred .value { font-size: 2vh; color: #FFF; font-weight: 400; margin-bottom: 1.5vh; }
 
-/* RESTAURANT CARD (CENTER) */
+/* RESTAURANT CARD (CENTER) -- rotates the Drawing Room logo with any promos pushed from Master */
 .restaurant-card {
     align-items: center;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+#promo-carousel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 32vh;
+}
+.promo-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+}
+.promo-slide.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 .res-logo {
     width: 27vw;
@@ -276,6 +299,13 @@ html, body {
     color: #EEE;
     font-style: italic;
     max-width: 90%;
+}
+.promo-image {
+    width: 27vw;
+    height: auto;
+    max-height: 32vh;
+    object-fit: contain;
+    border-radius: 1vw;
 }
 
 /* ============================================================

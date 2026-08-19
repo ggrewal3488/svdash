@@ -31,6 +31,7 @@
         <nav id="tabs">
             <button class="tab-btn active" data-tab="update">Update</button>
             <button class="tab-btn" data-tab="inhouse">In-House</button>
+            <button class="tab-btn" data-tab="content">Content</button>
             <button class="tab-btn admin-only hidden" data-tab="users">Users</button>
         </nav>
         <div id="user-info">
@@ -77,6 +78,28 @@
                 <button id="refresh-inhouse">Refresh</button>
             </div>
             <div id="inhouse-content"><p class="muted">Loading…</p></div>
+        </section>
+
+        <section id="tab-content" class="tab-panel hidden">
+            <div class="panel-head">
+                <h2>Center Card Content</h2>
+                <button id="refresh-promos">Refresh</button>
+            </div>
+
+            <div class="guidelines-box">
+                <strong>Guidelines:</strong> JPG or PNG only &middot; max 5MB per image &middot;
+                recommended resolution ~1600&times;1000px (matches the TV card's aspect ratio) &middot;
+                up to 5 images active at once.
+            </div>
+
+            <div id="promo-grid" class="promo-grid"></div>
+
+            <form id="promo-upload-form">
+                <label>Add Promotional Image
+                    <input type="file" id="promo-file-input" accept="image/jpeg,image/png">
+                </label>
+                <div class="status" id="promo-status"></div>
+            </form>
         </section>
 
         <section id="tab-users" class="tab-panel hidden">

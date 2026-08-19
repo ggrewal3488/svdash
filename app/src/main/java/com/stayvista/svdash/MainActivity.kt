@@ -249,6 +249,14 @@ class MainActivity : AppCompatActivity() {
                 if (::webView.isInitialized) webView.reload()
             }
         }
+
+        // Promo images are global, not per-room, but ride the same poll cycle.
+        PromoManager.syncPromos(this) { changed ->
+            if (!changed) return@syncPromos
+            runOnUiThread {
+                if (::webView.isInitialized) webView.reload()
+            }
+        }
     }
 
     private fun hideSystemUI() {

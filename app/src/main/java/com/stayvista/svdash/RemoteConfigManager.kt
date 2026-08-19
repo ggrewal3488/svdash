@@ -5,18 +5,16 @@ import android.util.Log
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
-import java.net.URL
 
 object RemoteConfigManager {
     private const val TAG = "RemoteConfig"
     private const val CONFIG_FILENAME = "remote_config.json"
-    private const val MAX_REDIRECTS = 5
 
     /** How often a running dashboard re-checks the cloud for a new guest push. */
     const val POLL_INTERVAL_MS = 60_000L
 
     // Google Apps Script URL - MAKE SURE THIS MATCHES YOUR LATEST DEPLOYMENT
-    private const val BASE_URL = "https://script.google.com/macros/s/AKfycbxRb032fWp2LCcF0EDWJ-AcHVvUs_gRBD4obQsV14YE1Cf80DwEoqGpe21Njzku3R6vRQ/exec"
+    const val BASE_URL = "https://script.google.com/macros/s/AKfycbxRb032fWp2LCcF0EDWJ-AcHVvUs_gRBD4obQsV14YE1Cf80DwEoqGpe21Njzku3R6vRQ/exec"
 
     /**
      * Fetches this room's guest data from the cloud.
@@ -31,24 +29,8 @@ object RemoteConfigManager {
             var changed = false
             try {
                 val scriptUrl = "$BASE_URL?room=$roomNumber&t=${System.currentTimeMillis()}"
-                var connection = URL(scriptUrl).openConnection() as HttpURLConnection
-                connection.instanceFollowRedirects = false // We will follow manually
-                connection.connectTimeout = 15000
-                connection.readTimeout = 15000
-
-                var responseCode = connection.responseCode
-
-                // Manually follow all redirects (Google uses multiple)
-                var hops = 0
-                while (responseCode / 100 == 3 && hops++ < MAX_REDIRECTS) {
-                    val newUrl = connection.getHeaderField("Location") ?: break
-                    connection.disconnect()
-                    connection = URL(newUrl).openConnection() as HttpURLConnection
-                    connection.instanceFollowRedirects = false
-                    connection.connectTimeout = 15000
-                    connection.readTimeout = 15000
-                    responseCode = connection.responseCode
-                }
+                val connection = HttpUtil.openFollowingRedirects(scriptUrl)
+                val responseCode = connection.responseCode
 
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val body = connection.inputStream.bufferedReader().use { it.readText() }

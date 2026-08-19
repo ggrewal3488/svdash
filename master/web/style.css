@@ -231,6 +231,63 @@ tr:last-child td { border-bottom: none; }
 #add-user-form button { grid-column: span 1; }
 #add-user-form .status { grid-column: 1 / -1; }
 
+/* ----- Content tab (center card promos) ----- */
+.guidelines-box {
+    background: var(--panel-solid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+.guidelines-box strong { color: var(--gold-light); }
+
+.promo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.promo-card {
+    background: var(--panel-solid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.promo-card img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+}
+
+.promo-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.6rem;
+}
+
+.promo-card-footer button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--danger);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.78rem;
+}
+
+#promo-upload-form {
+    background: var(--panel-solid);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 420px;
+}
+
 /* ----- Overwrite modal ----- */
 .modal {
     position: fixed;
