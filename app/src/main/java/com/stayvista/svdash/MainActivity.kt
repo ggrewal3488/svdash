@@ -1,7 +1,12 @@
 package com.stayvista.svdash
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -31,6 +36,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // A TV that was just switched on may take a few seconds to bring WiFi/
+    // Ethernet up -- the first syncRoomConfig() in onResume() can fire before
+    // that's ready and just fail. Rather than sit on that failure for a full
+    // POLL_INTERVAL_MS, re-sync the moment connectivity actually shows up.
+    private lateinit var connectivityManager: ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            runOnUiThread { syncRoomConfig() }
+        }
+    }
+
     // Boot-time launch already triggers one check (below); this catches TVs
     // that stay powered on for weeks without ever rebooting.
     private val updateCheckHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -46,6 +62,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         hideSystemUI()
+
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         setContentView(R.layout.activity_main)
 
@@ -188,6 +206,8 @@ class MainActivity : AppCompatActivity() {
         // Catch anything pushed while we were backgrounded.
         syncRoomConfig()
 
+        registerNetworkCallback()
+
         updateCheckHandler.removeCallbacks(updateCheckRunnable)
         updateCheckHandler.postDelayed(updateCheckRunnable, UpdateManager.CHECK_INTERVAL_MS)
     }
@@ -196,12 +216,33 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         pollHandler.removeCallbacks(pollRunnable)
         updateCheckHandler.removeCallbacks(updateCheckRunnable)
+        unregisterNetworkCallback()
     }
 
     override fun onDestroy() {
         pollHandler.removeCallbacks(pollRunnable)
         updateCheckHandler.removeCallbacks(updateCheckRunnable)
         super.onDestroy()
+    }
+
+    private fun registerNetworkCallback() {
+        try {
+            val request = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            connectivityManager.registerNetworkCallback(request, networkCallback)
+        } catch (e: Exception) {
+            // Already registered, or the platform rejected the request -- the
+            // regular poll loop still covers us either way.
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            // Wasn't registered -- nothing to clean up.
+        }
     }
 
     /**
