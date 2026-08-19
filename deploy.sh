@@ -84,7 +84,7 @@ ROOMS="\
 
 FILTER="${1:-all}"
 CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-8}"     # seconds; macOS has no `timeout(1)`, so we roll our own
-INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-90}"    # seconds; a wedged streamed install can otherwise hang forever
+INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-180}"   # seconds; a wedged streamed install can otherwise hang forever
 
 # Portable bounded-wait wrapper: "$@" is backgrounded and killed if it
 # outdoes $1 seconds. Needed because `adb connect` to a host that's
