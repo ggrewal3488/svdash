@@ -83,25 +83,49 @@ ROOMS="\
 [ -f "$APK" ] || { echo "APK not found: $APK  (build it first)"; exit 1; }
 
 FILTER="${1:-all}"
+CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-8}"     # seconds; macOS has no `timeout(1)`, so we roll our own
+INSTALL_TIMEOUT="${INSTALL_TIMEOUT:-90}"    # seconds; a wedged streamed install can otherwise hang forever
+
+# Portable bounded-wait wrapper: "$@" is backgrounded and killed if it
+# outdoes $1 seconds. Needed because `adb connect` to a host that's
+# unreachable-but-not-actively-refusing (no RST) can hang on the TCP
+# handshake far longer than the ROOMS table has patience for, stalling
+# the whole fleet rollout behind one dead TV.
+with_timeout() {
+  local secs="$1"; shift
+  "$@" &
+  local pid=$!
+  ( sleep "$secs"; kill -TERM "$pid" 2>/dev/null ) &
+  local watchdog=$!
+  wait "$pid" 2>/dev/null
+  local rc=$?
+  kill "$watchdog" 2>/dev/null
+  wait "$watchdog" 2>/dev/null
+  return $rc
+}
 
 deploy_one() {
   local room="$1" ip="$2" target="$2:$ADB_PORT"
   echo "==> Room $room  ($target)"
 
-  if ! "$ADB" connect "$target" | grep -qE "connected|already"; then
-    echo "    !! could not connect to $target — skipping"
+  if ! with_timeout "$CONNECT_TIMEOUT" "$ADB" connect "$target" | grep -qE "connected|already"; then
+    echo "    !! could not connect to $target (within ${CONNECT_TIMEOUT}s) — skipping"
     return 1
   fi
 
   echo "    installing $APK"
-  "$ADB" -s "$target" install -r "$APK"
+  if ! with_timeout "$INSTALL_TIMEOUT" "$ADB" -s "$target" install -r "$APK" </dev/null; then
+    echo "    !! install timed out/failed after ${INSTALL_TIMEOUT}s — skipping rest of this room"
+    "$ADB" disconnect "$target" >/dev/null 2>&1 || true
+    return 1
+  fi
 
   echo "    provisioning room=$room"
-  "$ADB" -s "$target" shell am start -n "$ACTIVITY" --es room "$room" >/dev/null
+  "$ADB" -s "$target" shell am start -n "$ACTIVITY" --es room "$room" >/dev/null </dev/null
 
   if [ "$BUILD_TYPE" = "release" ] && [ "$CUTOVER" = "1" ]; then
     echo "    setting default HOME app -> $ACTIVITY"
-    "$ADB" -s "$target" shell cmd package set-home-activity "$ACTIVITY" || \
+    "$ADB" -s "$target" shell cmd package set-home-activity "$ACTIVITY" </dev/null || \
       echo "    !! set-home-activity failed — set it manually on this TV"
 
     echo "    removing sibling debug app ($DEBUG_PKG)"
@@ -114,11 +138,14 @@ deploy_one() {
 }
 
 rc=0
-while read -r room ip; do
+# Read room list from fd 3, not stdin (fd 0) -- `adb shell` inside deploy_one
+# forwards stdin to the device by default, and would otherwise swallow the
+# rest of $ROOMS after the first iteration.
+while read -r room ip <&3; do
   [ -z "${room:-}" ] && continue
   if [ "$FILTER" = "all" ] || [ "$FILTER" = "$room" ]; then
     deploy_one "$room" "$ip" || rc=1
   fi
-done <<< "$ROOMS"
+done 3<<< "$ROOMS"
 
 exit $rc
