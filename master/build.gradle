@@ -15,10 +15,28 @@ android {
         versionName "1.0"
     }
 
+    // Populated from -PKEYSTORE_FILE / -PSTORE_PASSWORD / -PKEY_ALIAS /
+    // -PKEY_PASSWORD (see .github/workflows/master.yml). Same keystore as
+    // the svdash app -- left unset for a plain local `assembleDebug`.
+    def hasReleaseSigning = project.hasProperty('KEYSTORE_FILE')
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(project.property('KEYSTORE_FILE'))
+                storePassword project.property('STORE_PASSWORD')
+                keyAlias project.property('KEY_ALIAS')
+                keyPassword project.property('KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 

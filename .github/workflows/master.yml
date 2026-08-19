@@ -1,0 +1,86 @@
+name: Build Master APK
+
+on:
+  push:
+    tags: [ 'master-v*' ]
+  workflow_dispatch:
+
+# Repo-default GITHUB_TOKEN is read-only on repos created after Feb 2023;
+# the release job needs write access to create a GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Master APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant gradlew execute permission
+        run: chmod +x gradlew
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/keystore.jks
+
+      - name: Build Master release APK
+        run: |
+          ./gradlew :master:assembleRelease --no-daemon \
+            -PKEYSTORE_FILE=${{ github.workspace }}/keystore.jks \
+            -PSTORE_PASSWORD=${{ secrets.STORE_PASSWORD }} \
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+            -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload Master APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: svdash-master-${{ github.ref_name }}
+          path: master/build/outputs/apk/release/master-release.apk
+          retention-days: 90
+
+      # Deliberately a SEPARATE, pre-release GitHub Release from svdash's
+      # ("v*" tags) -- svdash's own OTA updater (UpdateManager.kt) grabs the
+      # first .apk asset off /releases/latest. Attaching the Master APK to
+      # the same release, or letting it become "latest", risks a TV
+      # downloading and prompting to install the wrong app.
+      - name: Create GitHub Release (pre-release, Master only)
+        if: startsWith(github.ref, 'refs/tags/master-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SVDash Master ${{ github.ref_name }}
+          prerelease: true
+          body: |
+            ## SVDash Master ${{ github.ref_name }}
+
+            Staff-facing Master app (guest push, in-house list, center-card content).
+            Not part of the TV app's auto-update feed.
+
+            ### Install
+            ```
+            adb install master-release.apk
+            ```
+            Or sideload via USB / file manager.
+          files: master/build/outputs/apk/release/master-release.apk
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
