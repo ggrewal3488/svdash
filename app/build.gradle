@@ -15,8 +15,8 @@ android {
         // and versionName, commit, then tag the release "v<versionCode>"
         // (e.g. versionCode 4 -> tag v4). UpdateManager compares the GitHub
         // release tag directly against the installed versionCode.
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "1.2.0"
     }
 
     // Populated from -PKEYSTORE_FILE / -PSTORE_PASSWORD / -PKEY_ALIAS /
