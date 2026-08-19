@@ -110,7 +110,7 @@ class UpdateFragment : Fragment() {
     /** Reads the room back and checks the pushed name is really stored. */
     private fun verifySaved(client: OkHttpClient, roomNo: String, lastName: String, onDone: () -> Unit) {
         val request = Request.Builder()
-            .url("$apiUrl?room=$roomNo&t=${System.currentTimeMillis()}")
+            .url("$apiUrl?room=$roomNo&key=${BuildConfig.DEVICE_KEY}&t=${System.currentTimeMillis()}")
             .get()
             .build()
 

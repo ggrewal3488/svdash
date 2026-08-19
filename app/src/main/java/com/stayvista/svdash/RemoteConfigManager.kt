@@ -28,7 +28,7 @@ object RemoteConfigManager {
         Thread {
             var changed = false
             try {
-                val scriptUrl = "$BASE_URL?room=$roomNumber&t=${System.currentTimeMillis()}"
+                val scriptUrl = "$BASE_URL?room=$roomNumber&key=${BuildConfig.DEVICE_KEY}&t=${System.currentTimeMillis()}"
                 val connection = HttpUtil.openFollowingRedirects(scriptUrl)
                 val responseCode = connection.responseCode
 

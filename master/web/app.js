@@ -152,7 +152,7 @@ function onUpdateSubmit(e) {
     };
 
     setStatus(statusEl, "Checking room…", "");
-    apiGet({ room: roomNo }).then(function (existing) {
+    apiGet({ room: roomNo, token: session.token }).then(function (existing) {
         if (existing && existing.lastName) {
             openOverwriteModal(existing, data);
             setStatus(statusEl, "", "");
@@ -228,7 +228,7 @@ function loadInHouse() {
     if (!session) return;
     content.innerHTML = '<p class="muted">Loading…</p>';
 
-    apiGet({ room: "ALL" }).then(function (rooms) {
+    apiGet({ room: "ALL", token: session.token }).then(function (rooms) {
         renderInHouse(rooms || {});
     }).catch(function () {
         content.innerHTML = '<p class="status error">Could not load guests</p>';

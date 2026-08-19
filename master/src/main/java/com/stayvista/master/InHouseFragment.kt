@@ -15,7 +15,7 @@ import java.io.IOException
 
 class InHouseFragment : Fragment() {
 
-    private val API_URL = "https://script.google.com/macros/s/AKfycbxRb032fWp2LCcF0EDWJ-AcHVvUs_gRBD4obQsV14YE1Cf80DwEoqGpe21Njzku3R6vRQ/exec?room=ALL"
+    private val API_URL = "https://script.google.com/macros/s/AKfycbxRb032fWp2LCcF0EDWJ-AcHVvUs_gRBD4obQsV14YE1Cf80DwEoqGpe21Njzku3R6vRQ/exec?room=ALL&key=${BuildConfig.DEVICE_KEY}"
     private lateinit var rvGuests: RecyclerView
     private var guestList = mutableListOf<Guest>()
 

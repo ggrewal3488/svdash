@@ -6,9 +6,13 @@
  *    Master Android app and the TV boxes.
  * 2. Extensions > Apps Script. Replace the entire contents of Code.gs with
  *    this file.
- * 3. Change SECRET and SALT below to your own random strings before you
- *    deploy (anything long/random works — just keep them private, don't
- *    reuse the placeholders).
+ * 3. Change SECRET, SALT and DEVICE_KEY below to your own random strings
+ *    before you deploy (anything long/random works — just keep them
+ *    private, don't reuse the placeholders, and don't commit the real
+ *    values back to git). DEVICE_KEY must also be set as a GitHub Actions
+ *    repo secret of the same name, since it's what lets the TV app and the
+ *    Master app's unauthenticated calls (guest push, in-house list) reach
+ *    ?room=... without a login — see DEVICE_KEY's own comment below.
  * 4. Deploy > Manage deployments > the existing deployment > Edit (pencil
  *    icon) > Version: New version > Deploy. This keeps the same /exec URL
  *    that's already hardcoded in the Android app, the TV sync, and
@@ -19,20 +23,27 @@
  *    Users tab.
  *
  * Endpoints (all on the one /exec URL):
- *   GET  ?room=ALL                    -> all occupied rooms, unauthenticated
- *   GET  ?room=<no>                   -> one room's guest data, unauthenticated
- *   GET  ?action=verify&token=...     -> { ok, username, role }
- *   GET  ?action=listUsers&token=...  -> admin only
- *   GET  ?action=getPromos            -> active promo images (id, url, hash, order), unauthenticated
+ *   GET  ?room=ALL&(token=...|key=...)     -> all occupied rooms
+ *   GET  ?room=<no>&(token=...|key=...)    -> one room's guest data
+ *   GET  ?action=verify&token=...          -> { ok, username, role }
+ *   GET  ?action=listUsers&token=...       -> admin only
+ *   GET  ?action=getPromos                 -> active promo images (id, url, hash, order), unauthenticated
  *   POST { action: 'login', ... }
- *   POST { action: 'createUser', ... } -> admin only
+ *   POST { action: 'createUser', ... }     -> admin only
  *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
  *   POST { action: 'deletePromo', id, token? } -> remove a promo image
- *   POST { roomNo, ... }              -> push/overwrite a room's guest (action omitted or 'pushGuest')
+ *   POST { roomNo, ... }                   -> push/overwrite a room's guest (action omitted or 'pushGuest')
  */
 
 var SECRET = 'CHANGE-ME-BEFORE-DEPLOYING-A-LONG-RANDOM-STRING';
 var SALT = 'CHANGE-ME-TOO-ANOTHER-RANDOM-STRING';
+// Shared secret for callers that can't log in (the TV app's guest-data
+// poll, the Master app's unauthenticated guest push/in-house list). A
+// valid session token also satisfies this check, so logged-in Master web
+// users never need to know it. Never committed to git as a real value --
+// the apps get it injected at build time from a DEVICE_KEY CI secret,
+// same pattern as the release-signing keystore.
+var DEVICE_KEY = 'CHANGE-ME-DEVICE-KEY-BEFORE-DEPLOYING';
 var TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 function doGet(e) {
@@ -51,9 +62,11 @@ function doGet(e) {
       return json_({ ok: true, promos: getPromosJson_() });
     }
     if (params.room === 'ALL') {
+      if (!isAuthorizedRoomRequest_(params)) return json_({ ok: false, error: 'Unauthorized' });
       return json_(getAllRoomsJson_());
     }
     if (params.room) {
+      if (!isAuthorizedRoomRequest_(params)) return json_({ ok: false, error: 'Unauthorized' });
       return json_(getRoomJson_(params.room));
     }
     return json_({ ok: false, error: 'Missing room or action parameter' });
@@ -322,6 +335,17 @@ function listUsers_() {
     out.push({ username: data[i][0], role: data[i][2], createdAt: data[i][3] });
   }
   return out;
+}
+
+/**
+ * Gate for ?room=... : a valid logged-in session, OR the shared device key
+ * that ships baked into the TV app / Master app builds. Either is enough --
+ * this isn't role-based, just "not a random caller on the public internet".
+ */
+function isAuthorizedRoomRequest_(params) {
+  if (params.key && params.key === DEVICE_KEY) return true;
+  if (params.token && verifyToken_(params.token)) return true;
+  return false;
 }
 
 function requireAdmin_(token) {
