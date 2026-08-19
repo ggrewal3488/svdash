@@ -15,8 +15,8 @@ android {
         // and versionName, commit, then tag the release "v<versionCode>"
         // (e.g. versionCode 4 -> tag v4). UpdateManager compares the GitHub
         // release tag directly against the installed versionCode.
-        versionCode 3
-        versionName "1.2.0"
+        versionCode 4
+        versionName "1.3.0"
 
         // Shared secret that authorizes this app's unauthenticated ?room=...
         // polls against Code.gs's isAuthorizedRoomRequest_(). Populated from
