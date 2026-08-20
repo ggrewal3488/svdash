@@ -117,6 +117,7 @@ function wireDashboard() {
 
     document.getElementById("update-form").addEventListener("submit", onUpdateSubmit);
     document.getElementById("refresh-inhouse").addEventListener("click", loadInHouse);
+    document.getElementById("export-inhouse").addEventListener("click", exportInHouse);
     document.getElementById("refresh-users").addEventListener("click", loadUsers);
     document.getElementById("add-user-form").addEventListener("submit", onAddUserSubmit);
     document.getElementById("refresh-promos").addEventListener("click", loadPromos);
@@ -223,16 +224,48 @@ function closeOverwriteModal() {
 }
 
 /* ----- In-House tab ----- */
+var lastInHouseRooms = {};
+
 function loadInHouse() {
     var content = document.getElementById("inhouse-content");
     if (!session) return;
     content.innerHTML = '<p class="muted">Loading…</p>';
 
     apiGet({ room: "ALL", token: session.token }).then(function (rooms) {
-        renderInHouse(rooms || {});
+        lastInHouseRooms = rooms || {};
+        renderInHouse(lastInHouseRooms);
     }).catch(function () {
         content.innerHTML = '<p class="status error">Could not load guests</p>';
     });
+}
+
+/* Downloads the currently-loaded guest list as a CSV, mirroring the app's share-sheet export. */
+function exportInHouse() {
+    var roomNos = Object.keys(lastInHouseRooms);
+    if (roomNos.length === 0) {
+        alert("No guest data to export");
+        return;
+    }
+
+    var csv = "Room,Salutation,Last Name,Check-out\n";
+    roomNos.forEach(function (roomNo) {
+        var g = lastInHouseRooms[roomNo].guest || {};
+        csv += [csvField(roomNo), csvField(g.salutation || ""), csvField(g.lastName || ""), csvField(g.checkout || "")].join(",") + "\n";
+    });
+
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "inhouse_guests.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* Quotes a CSV field if it contains a comma, quote, or newline; doubles internal quotes. */
+function csvField(value) {
+    var str = String(value);
+    return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
 }
 
 function renderInHouse(rooms) {

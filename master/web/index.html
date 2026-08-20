@@ -49,6 +49,7 @@
                 </label>
                 <label>Salutation
                     <select id="f-salutation">
+                        <option></option>
                         <option>Mr.</option>
                         <option>Ms.</option>
                         <option>Mr. &amp; Mrs.</option>
@@ -75,7 +76,10 @@
         <section id="tab-inhouse" class="tab-panel hidden">
             <div class="panel-head">
                 <h2>In-House Guests</h2>
-                <button id="refresh-inhouse">Refresh</button>
+                <div class="panel-head-actions">
+                    <button id="export-inhouse">Export</button>
+                    <button id="refresh-inhouse">Refresh</button>
+                </div>
             </div>
             <div id="inhouse-content"><p class="muted">Loading…</p></div>
         </section>
