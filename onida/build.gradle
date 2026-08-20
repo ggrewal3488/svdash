@@ -1,0 +1,71 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.stayvista.onida'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.stayvista.onida"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        // Shared secret that authorizes this app's unauthenticated ?room=...
+        // calls (guest-push verification, the in-house list) against Code.gs's
+        // isAuthorizedRoomRequest_(). Populated from -PDEVICE_KEY (see
+        // .github/workflows/onida.yml); pass it by hand for a local
+        // `assembleDebug` against a Code.gs deployment that has a real
+        // DEVICE_KEY set.
+        buildConfigField "String", "DEVICE_KEY", "\"${project.findProperty('DEVICE_KEY') ?: ''}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // Populated from -PKEYSTORE_FILE / -PSTORE_PASSWORD / -PKEY_ALIAS /
+    // -PKEY_PASSWORD (see .github/workflows/onida.yml). Same keystore as
+    // the svdash app -- left unset for a plain local `assembleDebug`.
+    def hasReleaseSigning = project.hasProperty('KEYSTORE_FILE')
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(project.property('KEYSTORE_FILE'))
+                storePassword project.property('STORE_PASSWORD')
+                keyAlias project.property('KEY_ALIAS')
+                keyPassword project.property('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}

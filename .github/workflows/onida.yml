@@ -1,0 +1,88 @@
+name: Build Onida APK
+
+on:
+  push:
+    tags: [ 'onida-v*' ]
+  workflow_dispatch:
+
+# Repo-default GITHUB_TOKEN is read-only on repos created after Feb 2023;
+# the release job needs write access to create a GitHub Release.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Onida APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant gradlew execute permission
+        run: chmod +x gradlew
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/keystore.jks
+
+      - name: Build Onida release APK
+        run: |
+          ./gradlew :onida:assembleRelease --no-daemon \
+            -PKEYSTORE_FILE=${{ github.workspace }}/keystore.jks \
+            -PSTORE_PASSWORD=${{ secrets.STORE_PASSWORD }} \
+            -PKEY_ALIAS=${{ secrets.KEY_ALIAS }} \
+            -PKEY_PASSWORD=${{ secrets.KEY_PASSWORD }} \
+            -PDEVICE_KEY=${{ secrets.DEVICE_KEY }}
+
+      - name: Upload Onida APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: svdash-onida-${{ github.ref_name }}
+          path: onida/build/outputs/apk/release/onida-release.apk
+          retention-days: 90
+
+      # Deliberately a SEPARATE, pre-release GitHub Release from svdash's
+      # ("v*" tags) and master's ("master-v*" tags) -- svdash's own OTA
+      # updater (UpdateManager.kt) grabs the first .apk asset off
+      # /releases/latest. Attaching the Onida APK to the same release, or
+      # letting it become "latest", risks a TV downloading and prompting to
+      # install the wrong app.
+      - name: Create GitHub Release (pre-release, Onida only)
+        if: startsWith(github.ref, 'refs/tags/onida-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: SVDash Onida ${{ github.ref_name }}
+          prerelease: true
+          body: |
+            ## SVDash Onida ${{ github.ref_name }}
+
+            Independent app for the Onida R4G Android TV (Android TV OS 11).
+            Not part of the svdash TV app's auto-update feed.
+
+            ### Install
+            ```
+            adb install onida-release.apk
+            ```
+            Or sideload via USB / file manager.
+          files: onida/build/outputs/apk/release/onida-release.apk
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
