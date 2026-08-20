@@ -11,8 +11,8 @@ android {
         applicationId "com.stayvista.master"
         minSdk 24
         targetSdk 34
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
 
         // Shared secret that authorizes this app's unauthenticated ?room=...
         // calls (guest-push verification, the in-house list) against Code.gs's
