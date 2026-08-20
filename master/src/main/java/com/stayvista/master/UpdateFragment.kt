@@ -29,7 +29,7 @@ class UpdateFragment : Fragment() {
         val etMessage = view.findViewById<EditText>(R.id.etMessage)
         val btnPush = view.findViewById<Button>(R.id.btnPush)
 
-        val salutations = arrayOf("Mr.", "Ms.", "Mr. & Mrs.", "Dr.")
+        val salutations = arrayOf("", "Mr.", "Ms.", "Mr. & Mrs.", "Dr.")
         spSalutation.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, salutations)
 
         etCheckin.setOnClickListener { showDatePicker(etCheckin) }
