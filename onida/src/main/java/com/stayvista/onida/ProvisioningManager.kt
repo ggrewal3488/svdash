@@ -12,9 +12,9 @@ object ProvisioningManager {
     // ProvisioningManager.kt) -- add each one here as it's provisioned, MAC
     // noted for reference since these are cafe/common-area units, not
     // numbered guest rooms:
-    //   192.168.10.60 = TDR (The Drawing Room cafe), MAC D0-76-02-A1-EA-4D
+    //   192.168.10.60 = 1002 (The Drawing Room cafe), MAC D0-76-02-A1-EA-4D
     private val IP_ROOM_MAP = mapOf(
-        "192.168.10.60" to "TDR"
+        "192.168.10.60" to "1002"
     )
 
     /**
