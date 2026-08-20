@@ -1,0 +1,460 @@
+/* ─────────────────────────────────────────────────────────────
+   STAYVISTA RESIDENCES — UNIVERSAL LUXURY TV DASHBOARD
+   Design: Architectural / Responsive / Flexible Scale
+───────────────────────────────────────────────────────────── */
+
+/* Local Fonts for Absolute Reliability */
+@font-face {
+    font-family: 'Larken';
+    src: url('fonts/Larken-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Larken';
+    src: url('fonts/Larken-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+/* ============================================================
+   BASE & TYPOGRAPHY
+============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 1.1vw;
+}
+
+/* ============================================================
+   ANIMATIONS
+============================================================ */
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(2vh); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   MAIN WRAPPER
+============================================================ */
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: #000 url('background.png') no-repeat center center;
+    background-size: cover;
+}
+
+#app::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at top right, rgba(201,162,87,0.06) 0%, transparent 40%),
+                linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 100%);
+    backdrop-filter: blur(2px); /* Keep building and sky clear */
+    z-index: 1;
+}
+
+#app > * { position: relative; z-index: 2; }
+
+/* ============================================================
+   TOP BAR
+============================================================ */
+#topbar {
+    height: 15vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5vw;
+}
+
+#logo-img {
+    height: 10vh;
+    width: auto;
+}
+
+#weather-clock {
+    display: flex;
+    align-items: center;
+}
+
+#weather-widget { text-align: right; margin-right: 3vw; }
+#weather-main { display: flex; align-items: center; justify-content: flex-end; gap: 0.8vw; }
+#weather-icon { font-size: 3.2vh; }
+#weather-temp { font-size: 4.8vh; font-weight: 300; color: #FFF; }
+#weather-desc { font-size: 1.2vh; color: #C9A257; text-transform: uppercase; letter-spacing: 0.2vw; margin-top: -0.5vh; }
+
+#clock-widget { text-align: left; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 3vw; margin-right: 0; }
+#clock-time { font-size: 4.8vh; font-weight: 400; letter-spacing: -1px; }
+#clock-time .ampm { font-size: 1.8vh; color: #C9A257; margin-left: 0.5vw; }
+#clock-date { font-size: 1.2vh; color: #999; text-transform: uppercase; letter-spacing: 0.2vw; margin-top: 0.5vh; }
+
+#settings-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1vh;
+    padding: 1.5vh;
+    margin-left: 3vw;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#settings-btn img {
+    width: 3vh;
+    height: 3vh;
+    opacity: 0.7;
+}
+
+#settings-btn:focus {
+    background: rgba(201, 162, 87, 0.2);
+    border-color: #C9A257;
+    outline: none;
+    transform: scale(1.1);
+}
+
+#settings-btn:focus img {
+    opacity: 1;
+}
+
+/* ============================================================
+   CONTENT AREA
+============================================================ */
+#main {
+    flex: 1;
+    display: flex;
+    padding: 0 5vw 4vh 5vw;
+    gap: 4vw;
+    animation: fadeIn 1.2s ease-out;
+}
+
+#left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* WELCOME SECTION */
+#welcome { margin-bottom: 5vh; }
+#welcome .pre {
+    color: #E4BE6E;
+    font-size: 1.8vh;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5vw;
+    margin-bottom: 1.5vh;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+.guest-welcome {
+    font-family: 'Larken', serif;
+    font-size: 4vh;
+    color: #FFFFFF;
+    margin-bottom: 1vh;
+    font-weight: 300;
+}
+#welcome .name {
+    font-family: 'Larken', serif;
+    font-size: 4.5vh;
+    font-weight: 700;
+    margin-bottom: 1vh;
+    line-height: 1.1;
+    background: linear-gradient(90deg, #FFFFFF 0%, #C9A257 50%, #FFFFFF 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 10s linear infinite;
+}
+
+.guest-welcome {
+    font-family: 'Larken', serif;
+    font-size: 3.5vh;
+    color: #FFFFFF;
+    margin-bottom: 1vh;
+    font-weight: 300;
+}
+#welcome .tagline {
+    font-size: 1.8vh;
+    color: #EDEDED;
+    font-weight: 400;
+    font-style: normal;
+    font-family: 'Inter', sans-serif;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.guest-line {
+    font-family: 'Larken', serif;
+    font-size: 3.2vh;
+    font-weight: 500;
+    color: #FFFFFF;
+    margin-top: 2vh;
+    line-height: 1.3;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+.guest-line.hidden { display: none; }
+
+/* CARDS */
+#card-row {
+    display: flex;
+    gap: 2vw;
+}
+
+.card {
+    /* More opaque dark frost so content stays readable even on WebViews
+       that don't support backdrop-filter (older Android TV boxes). */
+    background: rgba(12, 12, 12, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 2.5vw;
+    padding: 2.5vw;
+    flex: 1;
+    -webkit-backdrop-filter: blur(60px); /* Deep Floating Glass Effect */
+    backdrop-filter: blur(60px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 38vh;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.card-title {
+    color: #C9A257;
+    font-size: 1.2vh;
+    font-weight: 600;
+    margin-bottom: 3vh;
+    text-transform: uppercase;
+    letter-spacing: 0.3vw;
+    text-align: center;
+}
+
+#wifi-qr-img {
+    width: 10vw;
+    height: 10vw;
+    max-width: 15vh;
+    max-height: 15vh;
+    background: #FFF;
+    padding: 0.8vw;
+    border-radius: 1vw;
+    display: block;
+    margin: 0 auto 2vh auto;
+}
+
+.wifi-cred { text-align: center; }
+.wifi-cred .label { font-size: 1vh; color: #777; text-transform: uppercase; letter-spacing: 0.15vw; margin-bottom: 0.5vh; }
+.wifi-cred .value { font-size: 2vh; color: #FFF; font-weight: 400; margin-bottom: 1.5vh; }
+
+/* RESTAURANT CARD (CENTER) -- rotates the Drawing Room logo with any promos pushed from Master */
+.restaurant-card {
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+#promo-carousel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 32vh;
+}
+.promo-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+}
+.promo-slide.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.res-logo {
+    width: 27vw;
+    height: auto;
+    margin-bottom: 2vh;
+}
+.res-tagline {
+    font-family: 'Larken', serif;
+    font-size: 2.2vh;
+    line-height: 1.4;
+    color: #EEE;
+    font-style: italic;
+    max-width: 90%;
+}
+.promo-image {
+    width: 27vw;
+    height: auto;
+    max-height: 32vh;
+    object-fit: contain;
+    border-radius: 1vw;
+}
+
+/* ============================================================
+   RIGHT PANEL
+============================================================ */
+#right-panel {
+    width: 22vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#need-something-img {
+    width: 100%;
+    height: auto;
+    border-radius: 3vw;
+    border: 1px solid rgba(201, 162, 87, 0.2);
+}
+
+/* ============================================================
+   DOCK
+============================================================ */
+#app-row {
+    height: 18vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    padding: 0 5vw 2vh 5vw;
+    backdrop-filter: blur(40px);
+}
+
+.app-btn {
+    width: 8vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    margin: 0 0.5vw;
+    opacity: 0.8;
+}
+
+.app-icon-img {
+    width: 6vh;
+    height: 6vh;
+    object-fit: contain;
+    margin-bottom: 1.5vh;
+}
+
+.app-btn span {
+    font-size: 1.2vh;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.15vw;
+}
+
+.app-btn:focus, .app-btn.active-btn {
+    opacity: 1;
+    transform: scale(1.1) translateY(-1vh);
+}
+
+.app-btn:focus span, .app-btn.active-btn span {
+    color: #C9A257;
+    font-weight: 600;
+}
+
+/* ============================================================
+   DEVICE INFO (Bottom Left)
+============================================================ */
+#device-info {
+    position: absolute;
+    bottom: 0.6vh;
+    left: 5vw;
+    font-size: 1.3vh;
+    color: rgba(201, 162, 87, 0.55);
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.1vw;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    z-index: 90;
+}
+
+/* ============================================================
+   ROOM SETUP OVERLAY (one-time per-TV provisioning)
+============================================================ */
+#room-setup {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.92);
+}
+
+#room-setup.hidden { display: none; }
+
+.room-setup-box {
+    width: 40vw;
+    max-width: 640px;
+    padding: 4vh 3vw;
+    text-align: center;
+    background: #111;
+    border: 1px solid rgba(201, 162, 87, 0.35);
+    border-radius: 1vw;
+}
+
+.room-setup-title {
+    font-family: 'Larken', serif;
+    font-size: 3.2vh;
+    color: #C9A257;
+    margin-bottom: 1vh;
+}
+
+.room-setup-sub {
+    font-size: 1.8vh;
+    color: #cfcfcf;
+    margin-bottom: 3vh;
+}
+
+#room-input {
+    width: 100%;
+    padding: 1.6vh 1vw;
+    font-size: 2.4vh;
+    text-align: center;
+    letter-spacing: 0.2vw;
+    color: #fff;
+    background: #000;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 0.6vw;
+    margin-bottom: 3vh;
+}
+
+#room-input:focus { border-color: #C9A257; }
+
+.room-save-btn {
+    padding: 1.4vh 2.5vw;
+    font-size: 2vh;
+    font-weight: 600;
+    color: #000;
+    background: #C9A257;
+    border: none;
+    border-radius: 0.6vw;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.room-save-btn:focus, .room-save-btn:hover {
+    transform: scale(1.06);
+}

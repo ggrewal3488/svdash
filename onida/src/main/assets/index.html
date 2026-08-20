@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>StayVista Universal Luxury</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+    <header id="topbar">
+        <div id="logo">
+            <img id="logo-img" src="logo.png" alt="StayVista">
+        </div>
+
+        <div id="weather-clock">
+            <div id="weather-widget">
+                <div id="weather-main">
+                    <span id="weather-icon"></span>
+                    <span id="weather-temp">--°C</span>
+                </div>
+                <div id="weather-desc">LOADING</div>
+            </div>
+
+            <div id="clock-widget">
+                <div id="clock-time">00:00 <span class="ampm">AM</span></div>
+                <div id="clock-date">LOADING...</div>
+            </div>
+        </div>
+    </header>
+
+    <main id="main">
+        <section id="left-panel">
+            <section id="welcome">
+                <div class="pre">Welcome</div>
+                <div class="name" id="welcome-name">StayVista Residences</div>
+                <div class="tagline" id="welcome-tagline">Unlock Comfort. Every Time!</div>
+                <div class="guest-line hidden" id="welcome-guest"></div>
+            </section>
+
+            <section id="card-row">
+                <article id="card-wifi" class="card">
+                    <div class="card-title">Secure Connectivity</div>
+                    <img id="wifi-qr-img" src="wifi_qr.png" alt="WiFi QR">
+                    <div class="wifi-cred">
+                        <div class="label">Private Network</div>
+                        <div id="wifi-network" class="value">StayVista_Guest</div>
+                        <div class="label">Access Key</div>
+                        <div id="wifi-password" class="value">luxury@stay</div>
+                    </div>
+                </article>
+
+                <!-- CENTER CARD: rotates the Drawing Room logo with any promos pushed from Master -->
+                <article id="card-restaurant" class="card restaurant-card">
+                    <div id="promo-carousel">
+                        <div class="promo-slide active" id="promo-slide-logo">
+                            <img src="tdr.png" class="res-logo" alt="The Dining Room">
+                            <div class="res-tagline">Experience a world of flavours, just levels away on level 5</div>
+                        </div>
+                        <div id="promo-dynamic-slides"></div>
+                    </div>
+                </article>
+            </section>
+        </section>
+
+        <aside id="right-panel">
+            <img id="need-something-img" src="need_something.png" alt="Concierge">
+        </aside>
+    </main>
+
+    <nav id="app-row">
+        <!-- Apps dynamically injected by script.js -->
+    </nav>
+
+    <div id="device-info"></div>
+
+</div>
+
+<!-- One-time per-TV setup: shown only when no room number is provisioned -->
+<div id="room-setup" class="hidden">
+    <div class="room-setup-box">
+        <div class="room-setup-title">TV Setup</div>
+        <div class="room-setup-sub">Enter the room number for this television</div>
+        <input id="room-input" type="text" inputmode="numeric" placeholder="e.g. 408" autocomplete="off">
+        <button id="room-save" class="room-save-btn">Save &amp; Continue</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
