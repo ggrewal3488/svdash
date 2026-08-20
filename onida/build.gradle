@@ -15,8 +15,8 @@ android {
         // and versionName, commit, then tag the release "onida-v<versionCode>"
         // (e.g. versionCode 2 -> tag onida-v2). UpdateManager compares the
         // matching GitHub release tag directly against the installed versionCode.
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
 
         // Shared secret that authorizes this app's unauthenticated ?room=...
         // polls against Code.gs's isAuthorizedRoomRequest_(). Populated from

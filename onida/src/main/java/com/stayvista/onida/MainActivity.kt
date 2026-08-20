@@ -61,11 +61,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        hideSystemUI()
-
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         setContentView(R.layout.activity_main)
+
+        // Must run after setContentView() -- on some Android 11 builds (seen
+        // on the Onida R4G) window.insetsController NPEs if the decor view
+        // isn't attached yet, which setContentView() is what attaches.
+        hideSystemUI()
 
         webView = findViewById(R.id.webView)
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
