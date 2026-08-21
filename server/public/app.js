@@ -124,7 +124,7 @@ function reservationRow(r, mode) {
     ? `<span class="pill">Room ${esc(r.room.roomNumber)}</span>`
     : `<span class="pill warn">no room</span>`;
 
-  const actions = [];
+  const actions = [`<button data-act="view" data-id="${r.id}" class="secondary">View</button>`];
   if (mode === "arrivals") {
     actions.push(`<button data-act="room" data-id="${r.id}" class="secondary">${r.room ? "Change room" : "Assign room"}</button>`);
     actions.push(`<button data-act="guest" data-id="${r.id}" class="secondary">Add guest</button>`);
@@ -201,6 +201,66 @@ document.addEventListener("click", async (e) => {
   const id = btn.dataset.id;
 
   try {
+    if (btn.dataset.act === "view") {
+      const [{ reservation }, { cards }] = await Promise.all([
+        api(`/reservations/${id}`),
+        api(`/reservations/${id}/cards`),
+      ]);
+
+      const guestBlock = (rg) => {
+        const g = rg.guest;
+        const docs = g.idDocuments
+          .map(
+            (d) => `
+            <div class="row">
+              <div>
+                <div class="name">${esc(d.idType.replace("_", " "))} · ${esc(d.idNumber)}</div>
+                <div class="meta">${[d.issuingCountry ? esc(d.issuingCountry) : "", d.scanRef ? "" : "no scan on file"].filter(Boolean).join(" · ")}</div>
+              </div>
+              <div class="spacer"></div>
+              ${d.scanRef ? `<a href="${esc(d.scanRef)}" target="_blank" rel="noopener">View scan</a>` : ""}
+            </div>`,
+          )
+          .join("") || `<p class="muted">No ID on file.</p>`;
+
+        return `
+          <div class="row">
+            <div>
+              <div class="name">${esc([g.salutation, g.lastName].filter(Boolean).join(" "))} <span class="pill">${esc(rg.role)}</span></div>
+              <div class="meta">${esc(g.phone || "no phone")}${g.email ? ` · ${esc(g.email)}` : ""}</div>
+            </div>
+          </div>
+          ${docs}`;
+      };
+
+      const cardBlock = cards.length
+        ? cards
+            .map(
+              (c) => `
+            <div class="row">
+              <div>
+                <div class="name">${esc([c.guest.salutation, c.guest.lastName].filter(Boolean).join(" "))}</div>
+                <div class="meta">Issued ${fmt(c.issuedAt)} · expires ${fmt(c.expiresAt)}</div>
+              </div>
+              <div class="spacer"></div>
+              <span class="pill ${c.status === "revoked" ? "bad" : "ok"}">${esc(c.status)}</span>
+            </div>`,
+            )
+            .join("")
+        : `<p class="muted">No cards issued.</p>`;
+
+      openModal(
+        esc(guestName(reservation)) || "Reservation",
+        `<p class="meta">${esc(reservation.externalPmsId)} · ${fmt(reservation.checkin)} → ${fmt(reservation.checkout)}${
+          reservation.room ? ` · Room ${esc(reservation.room.roomNumber)}` : ""
+        }</p>
+         <h3>Guests</h3>
+         ${reservation.guests.map(guestBlock).join("")}
+         <h3>Key cards</h3>
+         ${cardBlock}`,
+      );
+    }
+
     if (btn.dataset.act === "checkin") {
       await api(`/reservations/${id}/check-in`, { method: "POST" });
       banner("Checked in — the room's TV now shows the guest.", "ok");
