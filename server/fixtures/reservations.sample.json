@@ -1,0 +1,16 @@
+[
+  {
+    "externalPmsId": "PMS-10231",
+    "propertyCode": "GODREJ-01",
+    "propertyName": "Godrej Demo Property",
+    "checkin": "2026-08-22T14:00:00.000Z",
+    "checkout": "2026-08-25T11:00:00.000Z"
+  },
+  {
+    "externalPmsId": "PMS-10232",
+    "propertyCode": "GODREJ-01",
+    "propertyName": "Godrej Demo Property",
+    "checkin": "2026-08-23T14:00:00.000Z",
+    "checkout": "2026-08-24T11:00:00.000Z"
+  }
+]

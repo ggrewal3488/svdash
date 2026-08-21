@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoomStatus {
+  available
+  occupied
+  cleaning
+  maintenance
+  out_of_order
+}
+
+enum ReservationStatus {
+  confirmed
+  checked_in
+  checked_out
+  cancelled
+}
+
+enum GuestRole {
+  primary
+  secondary
+}
+
+enum IdType {
+  passport
+  drivers_license
+  national_id
+  aadhaar
+  other
+}
+
+enum CardStatus {
+  issued
+  active
+  expired
+  revoked
+}
+
+model Property {
+  id           String        @id @default(cuid())
+  name         String
+  code         String        @unique
+  rooms        Room[]
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  propertyId   String
+  property     Property      @relation(fields: [propertyId], references: [id])
+  roomNumber   String
+  status       RoomStatus    @default(available)
+  reservations Reservation[]
+  cards        Card[]
+
+  @@unique([propertyId, roomNumber])
+}
+
+model Guest {
+  id                String             @id @default(cuid())
+  salutation        String?
+  firstName         String
+  lastName          String
+  phone             String?
+  email             String?
+  idDocuments       IdDocument[]
+  reservationGuests ReservationGuest[]
+  cards             Card[]
+  createdAt         DateTime           @default(now())
+
+  @@index([lastName])
+}
+
+// Section 05 of the Master Platform Blueprint addendum.
+model IdDocument {
+  id             String    @id @default(cuid())
+  guestId        String
+  guest          Guest     @relation(fields: [guestId], references: [id])
+  idType         IdType
+  idNumber       String
+  issuingCountry String?
+  expiry         DateTime?
+  scanRef        String?
+  createdAt      DateTime  @default(now())
+
+  @@index([idNumber])
+}
+
+model Reservation {
+  id             String             @id @default(cuid())
+  // Foreign key back to the property's existing PMS — Master imports
+  // reservations, it does not originate them.
+  externalPmsId  String             @unique
+  propertyId     String
+  property       Property           @relation(fields: [propertyId], references: [id])
+  roomId         String?
+  room           Room?              @relation(fields: [roomId], references: [id])
+  checkin        DateTime
+  checkout       DateTime
+  status         ReservationStatus  @default(confirmed)
+  message        String?
+  guests         ReservationGuest[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+// Section 05 of the Master Platform Blueprint addendum.
+model ReservationGuest {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  guestId       String
+  guest         Guest       @relation(fields: [guestId], references: [id])
+  role          GuestRole
+
+  @@unique([reservationId, guestId])
+}
+
+model Card {
+  id        String     @id @default(cuid())
+  guestId   String
+  guest     Guest      @relation(fields: [guestId], references: [id])
+  roomId    String
+  room      Room       @relation(fields: [roomId], references: [id])
+  status    CardStatus @default(issued)
+  issuedAt  DateTime   @default(now())
+  expiresAt DateTime?
+}
