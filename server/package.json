@@ -2,14 +2,15 @@
   "name": "master-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Master Application API — reservations, guests, cards, and the TV bridge writer.",
+  "description": "Master Application API \u2014 reservations, guests, cards, and the TV bridge writer.",
   "type": "commonjs",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -22,5 +23,8 @@
     "prisma": "^5.20.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.2"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }
