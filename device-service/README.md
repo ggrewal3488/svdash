@@ -32,6 +32,29 @@ node verify.js
 
 This proves the DLLs load and reports real values back — it doesn't program anything. Any `FAIL` on the ACR120 calls means that call's signature in `acr120.js` needs a fix; that's the expected first pass, not a sign something's broken.
 
+## Auth
+
+Every route except `/health` requires `DEVICE_SERVICE_KEY` (as `x-api-key` or a bearer token — see `src/auth.ts`), the same fail-closed pattern `server/`'s `MASTER_API_KEY` uses: if the key isn't set, the service refuses all requests rather than running open in front of hardware that can write physical key cards. `server/`'s `deviceServiceClient.ts` sends this automatically once `DEVICE_SERVICE_URL`/`DEVICE_SERVICE_KEY` are set in its `.env` — the two keys must match.
+
+## Running as a Windows Service
+
+Both `device-service/` and `bridge32/` install as native Windows Services via `node-windows`, so they survive reboots and restart on crash instead of needing someone to remote in and run `npm start` by hand.
+
+**device-service** (as Administrator, after `npm install && npm run build`):
+```
+npm run service:install
+npm run service:uninstall   # to remove
+```
+
+**bridge32** — must be pinned to a 32-bit Node build via `BRIDGE32_NODE_EXE`, since the vendor DLLs can't load into whatever 64-bit Node is on PATH by default:
+```
+set BRIDGE32_NODE_EXE=C:\path\to\node-v22.x.x-win-x86\node.exe
+npm run service:install
+npm run service:uninstall   # to remove
+```
+
+Both install scripts set `workingDirectory` explicitly, since Windows starts services from `system32` by default and `.env`/DLL paths are resolved relative to `process.cwd()`.
+
 ## Status
 
-Scaffolding only. Neither package has been built or run — there's no Windows machine or physical hardware available in this environment. Everything here is source code to bring to the front-desk PC, run `verify.js` against, and fix up from there. `device-service/` itself only proxies health/version checks through to `bridge32/` right now; there's deliberately no card-issuance endpoint yet because the byte layout it would need doesn't exist yet either.
+Scaffolding only, not yet run against real hardware. Everything here is source code to bring to the front-desk PC: run `bridge32/verify.js` first, fix up `acr120.js`'s signatures against what it reports, then install both as services. `device-service/` itself only proxies health/version checks and a `/cards/encode` stub through to `bridge32/` right now — see `src/cardLayout.ts` for why real card encoding isn't wired up yet.

@@ -7,6 +7,7 @@
 // here as "couldn't reach the encoder / can't encode yet", not as an error
 // that should block issuing a card in the system of record.
 const DEVICE_SERVICE_URL = process.env.DEVICE_SERVICE_URL ?? "";
+const DEVICE_SERVICE_KEY = process.env.DEVICE_SERVICE_KEY ?? "";
 
 export interface EncodeCardResult {
   encoded: boolean;
@@ -17,11 +18,14 @@ export async function encodeCard(roomNumber: string, expiresAt: Date): Promise<E
   if (!DEVICE_SERVICE_URL) {
     return { encoded: false, reason: "DEVICE_SERVICE_URL not configured" };
   }
+  if (!DEVICE_SERVICE_KEY) {
+    return { encoded: false, reason: "DEVICE_SERVICE_KEY not configured" };
+  }
 
   try {
     const res = await fetch(`${DEVICE_SERVICE_URL}/cards/encode`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-api-key": DEVICE_SERVICE_KEY },
       body: JSON.stringify({ roomNumber, expiresAt: expiresAt.toISOString() }),
     });
     const json = (await res.json()) as { ok?: boolean; error?: string };

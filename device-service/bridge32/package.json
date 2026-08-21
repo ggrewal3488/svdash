@@ -7,10 +7,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "verify": "node verify.js"
+    "verify": "node verify.js",
+    "service:install": "node scripts/install-service.js",
+    "service:uninstall": "node scripts/uninstall-service.js"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "koffi": "^2.9.0"
+    "koffi": "^2.9.0",
+    "node-windows": "^1.0.0-beta.8"
   }
 }

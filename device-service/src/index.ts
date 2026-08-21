@@ -2,11 +2,16 @@ import "dotenv/config";
 import express from "express";
 import { bridge32 } from "./bridge32Client";
 import { encodeGuestCard } from "./cardLayout";
+import { requireApiKey } from "./auth";
 
 const app = express();
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Everything past here can trigger a physical card write or report on
+// hardware state, so it's gated the same way master-api gates guest PII.
+app.use(requireApiKey);
 
 // Proxies through to bridge32 (the 32-bit process with actual hardware
 // access — see bridge32/ and docs/VENDOR_SDK_FINDINGS.md) so the rest of
