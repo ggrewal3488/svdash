@@ -7,12 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Housekeeping's vocabulary: a vacant room is either dirty (just checked out,
+// awaiting HK) or ready to sell. HK moves vacant_dirty -> vacant_ready.
 enum RoomStatus {
-  available
+  vacant_ready
+  vacant_dirty
   occupied
-  cleaning
   maintenance
   out_of_order
+}
+
+enum RoomCategory {
+  comfort
+  executive
+  office_suite
 }
 
 enum ReservationStatus {
@@ -56,7 +64,8 @@ model Room {
   propertyId   String
   property     Property      @relation(fields: [propertyId], references: [id])
   roomNumber   String
-  status       RoomStatus    @default(available)
+  category     RoomCategory
+  status       RoomStatus    @default(vacant_ready)
   reservations Reservation[]
   cards        Card[]
 
@@ -106,6 +115,12 @@ model Reservation {
   checkout       DateTime
   status         ReservationStatus  @default(confirmed)
   message        String?
+  // How many people the booking is for. The front desk must collect name,
+  // phone and an ID proof for each one, so this is the target guest count a
+  // reservation is measured against before check-in.
+  pax            Int?
+  sourcePrimary  String?
+  sourceSecondary String?
   guests         ReservationGuest[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

@@ -33,6 +33,7 @@
  *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
  *   POST { action: 'deletePromo', id, token? } -> remove a promo image
  *   POST { roomNo, ... }                   -> push/overwrite a room's guest (action omitted or 'pushGuest')
+ *   GET  ?action=getBookings&(token=...|key=...) -> the Bookings tab, for the Master API's reservation sync
  */
 
 var SECRET = 'CHANGE-ME-BEFORE-DEPLOYING-A-LONG-RANDOM-STRING';
@@ -60,6 +61,12 @@ function doGet(e) {
     }
     if (params.action === 'getPromos') {
       return json_({ ok: true, promos: getPromosJson_() });
+    }
+    if (params.action === 'getBookings') {
+      // Bookings carry guest PII, so gate them like room data rather than
+      // leaving them open the way getPromos is.
+      if (!isAuthorizedRoomRequest_(params)) return json_({ ok: false, error: 'Unauthorized' });
+      return json_({ ok: true, bookings: getBookingsJson_() });
     }
     if (params.room === 'ALL') {
       if (!isAuthorizedRoomRequest_(params)) return json_({ ok: false, error: 'Unauthorized' });
@@ -369,6 +376,55 @@ function getOrCreateSheet_(name, headers) {
 
 function guestsSheet_() {
   return getOrCreateSheet_('Guests', ['RoomNo', 'Salutation', 'LastName', 'Checkin', 'Checkout', 'Message', 'UpdatedAt']);
+}
+
+function bookingsSheet_() {
+  return getOrCreateSheet_('Bookings', [
+    'Booking Id', 'Guest Name', 'Check-In', 'Check-Out',
+    'no. Of pax', 'primary source of booking', 'secondary source'
+  ]);
+}
+
+/**
+ * The Bookings tab, normalised for the Master API's /reservations/sync.
+ *
+ * Dates are emitted as yyyy-MM-dd strings: a date-formatted cell arrives here
+ * as a Date, a hand-typed one as a string, and the API should not have to care
+ * which. Rows without a Booking Id are skipped — that's the blank-row case,
+ * same convention getAllRoomsJson_ uses for rooms with no guest.
+ */
+function getBookingsJson_() {
+  var sheet = bookingsSheet_();
+  var data = sheet.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var bookingId = String(row[0] || '').trim();
+    if (!bookingId) continue;
+    out.push({
+      bookingId: bookingId,
+      guestName: String(row[1] || '').trim(),
+      checkin: toSheetDate_(row[2]),
+      checkout: toSheetDate_(row[3]),
+      pax: paxOrNull_(row[4]),
+      sourcePrimary: String(row[5] || '').trim(),
+      sourceSecondary: String(row[6] || '').trim()
+    });
+  }
+  return out;
+}
+
+function toSheetDate_(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return String(value).trim();
+}
+
+function paxOrNull_(value) {
+  var n = parseInt(value, 10);
+  return isNaN(n) ? null : n;
 }
 
 function usersSheet_() {
