@@ -69,18 +69,33 @@ end to end for this device.
 several DLL revisions over the years (16-bit `ACR120.dll`, several
 `ACR120U.dll` majors) with signature drift between them, and this install
 has no header file to pin down which one this is. Tested live against the
-real RW-41 reader (2026-08-21, confirmed present and healthy in Device
-Manager) through ~15 parameter/calling-convention variants for
-`ACR120_Open` and `ACR120_RequestDLLVersion` — none produced a result that
-reproduced on retest (one early "success" on `ACR120_Open(1)` looked
-promising but didn't hold up under a clean rerun, so it was **not** carried
-into `acr120.js`). One variant crashed the process outright (recovered
-fine) — a real sign of ABI mismatch, not just wrong return values.
+real RW-41 reader (2026-08-21/22, confirmed present and healthy in Device
+Manager throughout) through ~25 parameter/calling-convention variants
+across `ACR120_Open`, `ACR120_RequestDLLVersion`, and `ACR120_Select`:
+
+- `ACR120_Open(int32 nSlotNo) -> bool` failed 12/13 attempts across two
+  separate sessions (including 8 in a row with delays between retries — not
+  a timing issue). The one "success" (`Open(1) -> true`) never reproduced
+  and is confirmed noise, not a real signal — not carried into `acr120.js`.
+- `ACR120_Select(int32 nSlotNo, uint8_t *pSerNum) -> bool` crashed the
+  Node process outright on first attempt (zero output, immediate death) —
+  a real ABI mismatch, not just a wrong return value. A follow-up attempt
+  with a much larger output buffer (256 bytes vs. the original 16, to rule
+  out a buffer-overflow-triggered crash) was gated behind `Open` actually
+  succeeding first, which it never did, so `Select` was never safely
+  re-attempted. Whether the larger buffer would have avoided the crash is
+  still unknown.
+- `ACR120_RequestDLLVersion` — every variant returns cleanly (no crash) but
+  with a value that doesn't look like a real DLL version, across both
+  buffer and no-buffer variants.
+
 `bridge32/acr120.js` still declares the signatures from ACS's most commonly
 published v3.x API manual, still flagged `UNVERIFIED`. Black-box probing
-without documentation has hit its practical ceiling here; next step is
-sourcing ACS's actual "API Reference Manual for ACR120" rather than more
-guessing.
+without documentation has hit its practical ceiling here — one confirmed
+crash and no reproducible success across ~25 variants and two sessions is a
+real signal to stop guessing, not just bad luck. Next step is sourcing
+ACS's actual "API Reference Manual for ACR120" rather than continuing to
+guess at signatures with demonstrated crash risk.
 
 **Unknown and NOT in this SDK at all** — the actual room-card data format.
 Reading/writing raw Mifare blocks via `ACR120_Read`/`ACR120_Write` is now
