@@ -1,0 +1,22 @@
+{
+  "name": "device-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows Device Service from the Master Platform Blueprint — the control API in front of the Godrej lock/card hardware. Runs as 64-bit Node and talks to bridge32/ (32-bit, loads the vendor DLLs directly) over localhost HTTP.",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.4",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.2"
+  }
+}

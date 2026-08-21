@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+# Vendor DLLs/drivers aren't ours to redistribute — keep any local copies
+# (e.g. dropped in for testing) out of git.
+vendor/
