@@ -1,9 +1,20 @@
 import { Router } from "express";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { GuestRole } from "@prisma/client";
 import { db } from "../db";
+import { pushGuestToSheet, toSheetDate } from "../bridge/pushToSheet";
 
 export const reservationsRouter = Router();
+
+interface ExternalGuest {
+  role: GuestRole;
+  salutation?: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  email?: string;
+}
 
 interface ExternalReservation {
   externalPmsId: string;
@@ -11,6 +22,7 @@ interface ExternalReservation {
   propertyName: string;
   checkin: string;
   checkout: string;
+  guests: ExternalGuest[];
 }
 
 // Stub source: a fixture standing in for the property's real PMS. Swap this
@@ -45,6 +57,41 @@ reservationsRouter.post("/sync", async (_req, res) => {
         },
       });
 
+      // Guest has no external id to upsert on, so key off the reservation's
+      // existing link for that role: re-syncing updates the same Guest row
+      // rather than piling up duplicates for the same booking.
+      for (const g of r.guests) {
+        const existingLink = await db.reservationGuest.findFirst({
+          where: { reservationId: reservation.id, role: g.role },
+        });
+
+        if (existingLink) {
+          await db.guest.update({
+            where: { id: existingLink.guestId },
+            data: {
+              salutation: g.salutation,
+              firstName: g.firstName,
+              lastName: g.lastName,
+              phone: g.phone,
+              email: g.email,
+            },
+          });
+        } else {
+          const guest = await db.guest.create({
+            data: {
+              salutation: g.salutation,
+              firstName: g.firstName,
+              lastName: g.lastName,
+              phone: g.phone,
+              email: g.email,
+            },
+          });
+          await db.reservationGuest.create({
+            data: { reservationId: reservation.id, guestId: guest.id, role: g.role },
+          });
+        }
+      }
+
       synced.push(reservation);
     }
   } catch (err) {
@@ -54,4 +101,92 @@ reservationsRouter.post("/sync", async (_req, res) => {
   }
 
   res.json({ ok: true, synced: synced.length, reservations: synced });
+});
+
+// Rooms are assigned by hand, never by the sync — /sync deliberately leaves
+// roomId null. This is the front-desk action that sets it.
+reservationsRouter.post("/:id/room", async (req, res) => {
+  const roomNumber = String(req.body?.roomNumber ?? "").trim();
+  if (!roomNumber) {
+    res.status(400).json({ ok: false, error: "roomNumber is required" });
+    return;
+  }
+
+  try {
+    const reservation = await db.reservation.findUnique({ where: { id: req.params.id } });
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+
+    const room = await db.room.upsert({
+      where: { propertyId_roomNumber: { propertyId: reservation.propertyId, roomNumber } },
+      update: {},
+      create: { propertyId: reservation.propertyId, roomNumber },
+    });
+
+    const updated = await db.reservation.update({
+      where: { id: reservation.id },
+      data: { roomId: room.id },
+    });
+
+    res.json({ ok: true, reservation: updated, room });
+  } catch (err) {
+    console.error("assign room failed:", err);
+    res.status(500).json({ ok: false, error: "assign room failed" });
+  }
+});
+
+// Check-in is what actually reaches the TVs: it flips the reservation to
+// checked_in, marks the room occupied, and writes the primary guest into the
+// Guests sheet every TV already polls.
+reservationsRouter.post("/:id/check-in", async (req, res) => {
+  try {
+    const reservation = await db.reservation.findUnique({
+      where: { id: req.params.id },
+      include: { room: true, guests: { include: { guest: true } } },
+    });
+
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+    if (!reservation.room) {
+      res.status(409).json({ ok: false, error: "assign a room before checking in" });
+      return;
+    }
+
+    const primary = reservation.guests.find((g) => g.role === GuestRole.primary);
+    if (!primary) {
+      res.status(409).json({ ok: false, error: "reservation has no primary guest" });
+      return;
+    }
+
+    await pushGuestToSheet({
+      roomNo: reservation.room.roomNumber,
+      salutation: primary.guest.salutation ?? "",
+      lastName: primary.guest.lastName,
+      checkin: toSheetDate(reservation.checkin),
+      checkout: toSheetDate(reservation.checkout),
+      message: reservation.message ?? "",
+    });
+
+    // Only record the check-in once the TV bridge actually accepted the push,
+    // so a failed bridge write doesn't leave a guest marked in with a stale TV.
+    const [updated] = await db.$transaction([
+      db.reservation.update({
+        where: { id: reservation.id },
+        data: { status: "checked_in" },
+      }),
+      db.room.update({
+        where: { id: reservation.room.id },
+        data: { status: "occupied" },
+      }),
+    ]);
+
+    res.json({ ok: true, reservation: updated, pushedToRoom: reservation.room.roomNumber });
+  } catch (err) {
+    console.error("check-in failed:", err);
+    res.status(500).json({ ok: false, error: "check-in failed" });
+  }
 });

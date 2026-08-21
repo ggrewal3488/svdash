@@ -3,8 +3,6 @@
 // (master/backend/Code.gs). No auth needed: pushGuest_ only checks a token
 // if one is sent, and the Master app already posts without one.
 
-const BRIDGE_URL = process.env.BRIDGE_SHEET_URL;
-
 export interface GuestPush {
   roomNo: string;
   salutation?: string;
@@ -14,12 +12,23 @@ export interface GuestPush {
   message?: string;
 }
 
+// The Guests sheet stores plain YYYY-MM-DD strings — that's what the Master
+// web UI writes via <input type="date"> (master/web/index.html), and what the
+// TVs render back. Format Prisma DateTimes the same way so bridge rows written
+// by this API are indistinguishable from ones written by the Master app.
+export function toSheetDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 export async function pushGuestToSheet(guest: GuestPush): Promise<void> {
-  if (!BRIDGE_URL) {
+  // Read at call time, not module load: reading it into a const at import time
+  // silently yields undefined if this module is ever imported before dotenv runs.
+  const bridgeUrl = process.env.BRIDGE_SHEET_URL;
+  if (!bridgeUrl) {
     throw new Error("BRIDGE_SHEET_URL is not set — see server/.env.example");
   }
 
-  const res = await fetch(BRIDGE_URL, {
+  const res = await fetch(bridgeUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(guest),
