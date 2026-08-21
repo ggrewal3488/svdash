@@ -2,12 +2,14 @@ import "dotenv/config";
 import express from "express";
 import { reservationsRouter } from "./routes/reservations";
 import { roomsRouter } from "./routes/rooms";
+import { cardsRouter } from "./routes/cards";
 
 const app = express();
 app.use(express.json());
 
 app.use("/reservations", reservationsRouter);
 app.use("/rooms", roomsRouter);
+app.use("/cards", cardsRouter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

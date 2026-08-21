@@ -303,6 +303,71 @@ reservationsRouter.post("/:id/check-in", async (req, res) => {
   }
 });
 
+// Front desk handing over a physical key card. A card is scoped to this
+// reservation's room, so it can't be issued until check-in has actually put
+// a guest in that room — issuing one earlier would key a room nobody's in.
+reservationsRouter.post("/:id/cards", async (req, res) => {
+  const guestId = String(req.body?.guestId ?? "").trim();
+  if (!guestId) {
+    res.status(400).json({ ok: false, error: "guestId is required" });
+    return;
+  }
+
+  try {
+    const reservation = await db.reservation.findUnique({
+      where: { id: req.params.id },
+      include: { room: true, guests: true },
+    });
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+    if (!reservation.room) {
+      res.status(409).json({ ok: false, error: "reservation has no room" });
+      return;
+    }
+    if (reservation.status !== "checked_in") {
+      res.status(409).json({ ok: false, error: "check the guest in before issuing a card" });
+      return;
+    }
+    if (!reservation.guests.some((g) => g.guestId === guestId)) {
+      res.status(400).json({ ok: false, error: "guest is not on this reservation" });
+      return;
+    }
+
+    const card = await db.card.create({
+      data: { guestId, roomId: reservation.room.id, expiresAt: reservation.checkout },
+    });
+    res.json({ ok: true, card });
+  } catch (err) {
+    console.error("issue card failed:", err);
+    res.status(500).json({ ok: false, error: "issue card failed" });
+  }
+});
+
+reservationsRouter.get("/:id/cards", async (req, res) => {
+  try {
+    const reservation = await db.reservation.findUnique({
+      where: { id: req.params.id },
+      include: { guests: true },
+    });
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+
+    const cards = await db.card.findMany({
+      where: { guestId: { in: reservation.guests.map((g) => g.guestId) } },
+      include: { guest: true },
+      orderBy: { issuedAt: "desc" },
+    });
+    res.json({ ok: true, cards });
+  } catch (err) {
+    console.error("list cards failed:", err);
+    res.status(500).json({ ok: false, error: "list cards failed" });
+  }
+});
+
 // Check-out clears the room's TV. The Apps Script has no delete action, so a
 // blank lastName is how a room reads as vacant: getAllRoomsJson_ skips rows
 // with no lastName, and the TV's joinGuestName() hides the welcome line.
@@ -310,7 +375,7 @@ reservationsRouter.post("/:id/check-out", async (req, res) => {
   try {
     const reservation = await db.reservation.findUnique({
       where: { id: req.params.id },
-      include: { room: true },
+      include: { room: true, guests: true },
     });
 
     if (!reservation) {
@@ -337,7 +402,9 @@ reservationsRouter.post("/:id/check-out", async (req, res) => {
 
     // Same ordering as check-in: clear the TV first, so a failed push never
     // leaves a checked-out room still welcoming the departed guest. The room
-    // becomes vacant_dirty — only housekeeping moves it to vacant_ready.
+    // becomes vacant_dirty — only housekeeping moves it to vacant_ready. Any
+    // cards issued for this stay are revoked here too, so a departed guest's
+    // key stops working the moment the room does.
     const [updated] = await db.$transaction([
       db.reservation.update({
         where: { id: reservation.id },
@@ -346,6 +413,14 @@ reservationsRouter.post("/:id/check-out", async (req, res) => {
       db.room.update({
         where: { id: reservation.room.id },
         data: { status: "vacant_dirty" },
+      }),
+      db.card.updateMany({
+        where: {
+          roomId: reservation.room.id,
+          guestId: { in: reservation.guests.map((g) => g.guestId) },
+          status: { not: "revoked" },
+        },
+        data: { status: "revoked" },
       }),
     ]);
 
