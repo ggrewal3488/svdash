@@ -8,10 +8,14 @@ let apiKey = sessionStorage.getItem(KEY_STORE) || "";
 const $ = (sel) => document.querySelector(sel);
 
 async function api(path, options = {}) {
+  // A FormData body (the ID scan upload) needs the browser to set its own
+  // multipart Content-Type with the boundary — forcing application/json
+  // here would break the upload.
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
   const res = await fetch(path, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
       "x-api-key": apiKey,
       ...(options.headers || {}),
     },
@@ -255,11 +259,12 @@ document.addEventListener("click", async (e) => {
            <option value="other">Other</option>
          </select>
          <label>ID number</label><input id="m-idno" required>
+         <label>ID scan (optional)</label><input type="file" id="m-scan" accept="image/jpeg,image/png,image/webp,application/pdf">
          <div class="modal-actions"><button id="m-save">Save</button></div>`,
       );
       $("#m-save").addEventListener("click", async () => {
         try {
-          await api(`/reservations/${id}/guests`, {
+          const r = await api(`/reservations/${id}/guests`, {
             method: "POST",
             body: JSON.stringify({
               role: $("#m-role").value,
@@ -270,6 +275,17 @@ document.addEventListener("click", async (e) => {
               idNumber: $("#m-idno").value,
             }),
           });
+
+          // Uploaded as a second request, after the row it attaches to
+          // exists — a failed Drive upload shouldn't undo guest details
+          // that were otherwise fine.
+          const file = $("#m-scan").files[0];
+          if (file) {
+            const form = new FormData();
+            form.append("scan", file);
+            await api(`/id-documents/${r.idDocument.id}/scan`, { method: "POST", body: form });
+          }
+
           closeModal();
           banner("Guest details saved.", "ok");
           await refresh();

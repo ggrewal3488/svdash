@@ -6,6 +6,7 @@ import { startSyncScheduler } from "./scheduler";
 import { reservationsRouter } from "./routes/reservations";
 import { roomsRouter } from "./routes/rooms";
 import { cardsRouter } from "./routes/cards";
+import { idDocumentsRouter } from "./routes/idDocuments";
 
 const app = express();
 app.use(express.json());
@@ -22,6 +23,7 @@ app.post("/auth/verify", requireApiKey, (_req, res) => res.json({ ok: true }));
 app.use("/reservations", requireApiKey, reservationsRouter);
 app.use("/rooms", requireApiKey, roomsRouter);
 app.use("/cards", requireApiKey, cardsRouter);
+app.use("/id-documents", requireApiKey, idDocumentsRouter);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 8080;
 app.listen(port, () => {
