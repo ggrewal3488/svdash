@@ -57,17 +57,30 @@ PICC_Xch_APDU
 
 ## What's confirmed vs. what's still open
 
-**Confirmed** — function names (from the export table) and the CH375 call
-signatures (WCH's API has been stable and publicly documented for ~15+
-years; `bridge32/ch375.js` implements the core subset with real confidence).
+**Confirmed, and now hardware-tested (2026-08-21, real RD-08E lock
+programmer over SSH into the front-desk PC)** — the CH375 call signatures in
+`bridge32/ch375.js` work against real hardware, not just against a
+plausible-looking public API: `CH375GetVersion`/`CH375GetDrvVersion` return
+real values, and `CH375OpenDevice(0)` returns a real device handle (`840`)
+rather than the `0xFFFFFFFF` failure sentinel. `verify.js` passes cleanly
+end to end for this device.
 
-**Not confirmed** — exact ACR120U parameter marshaling. ACS shipped several
-DLL revisions over the years (16-bit `ACR120.dll`, several `ACR120U.dll`
-majors) with signature drift between them, and this install has no header
-file to pin down which one this is. `bridge32/acr120.js` declares the
-signatures from ACS's most commonly published v3.x API manual, but every one
-is flagged `UNVERIFIED` in comments — treat as a starting point to test
-against real hardware, not as trustworthy today.
+**Still not confirmed — exact ACR120U parameter marshaling.** ACS shipped
+several DLL revisions over the years (16-bit `ACR120.dll`, several
+`ACR120U.dll` majors) with signature drift between them, and this install
+has no header file to pin down which one this is. Tested live against the
+real RW-41 reader (2026-08-21, confirmed present and healthy in Device
+Manager) through ~15 parameter/calling-convention variants for
+`ACR120_Open` and `ACR120_RequestDLLVersion` — none produced a result that
+reproduced on retest (one early "success" on `ACR120_Open(1)` looked
+promising but didn't hold up under a clean rerun, so it was **not** carried
+into `acr120.js`). One variant crashed the process outright (recovered
+fine) — a real sign of ABI mismatch, not just wrong return values.
+`bridge32/acr120.js` still declares the signatures from ACS's most commonly
+published v3.x API manual, still flagged `UNVERIFIED`. Black-box probing
+without documentation has hit its practical ceiling here; next step is
+sourcing ACS's actual "API Reference Manual for ACR120" rather than more
+guessing.
 
 **Unknown and NOT in this SDK at all** — the actual room-card data format.
 Reading/writing raw Mifare blocks via `ACR120_Read`/`ACR120_Write` is now

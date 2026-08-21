@@ -3,11 +3,13 @@
 const koffi = require("koffi");
 
 // WCH's public CH375DLL.H API — these signatures are stable and have been
-// publicly documented for 15+ years; confidence here is real, not a guess.
-// This wires up the read/write/reset subset the RD-Z08 lock programmer
-// actually needs. The interrupt-transfer and internal-buffer exports
-// (CH375*Inter, CH375*Buf*) aren't included because nothing here uses them —
-// see ../docs/VENDOR_SDK_FINDINGS.md for the full export list.
+// publicly documented for 15+ years. CONFIRMED against the real RD-08E lock
+// programmer (2026-08-21): CH375GetVersion/CH375GetDrvVersion and
+// CH375OpenDevice(0) all return real values, not just clean failures. This
+// wires up the read/write/reset subset the RD-08E actually needs. The
+// interrupt-transfer and internal-buffer exports (CH375*Inter, CH375*Buf*)
+// aren't included because nothing here uses them — see
+// ../docs/VENDOR_SDK_FINDINGS.md for the full export list.
 function loadCh375(dllPath) {
   const lib = koffi.load(dllPath);
 
