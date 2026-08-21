@@ -296,7 +296,14 @@ document.addEventListener("click", async (e) => {
             body: JSON.stringify({ guestId: $("#m-guest").value }),
           });
           closeModal();
-          banner(`Card issued (${r2.card.id.slice(0, 8)}…).`, "ok");
+          if (r2.hardwareEncoded) {
+            banner(`Card issued and encoded (${r2.card.id.slice(0, 8)}…).`, "ok");
+          } else {
+            banner(
+              `Card recorded (${r2.card.id.slice(0, 8)}…) — encode it by hand, hardware bridge unavailable: ${r2.hardwareReason || "not configured"}.`,
+              "warn",
+            );
+          }
         } catch (err) {
           banner(err.message, "bad");
         }

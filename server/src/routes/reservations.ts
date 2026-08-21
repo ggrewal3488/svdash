@@ -3,6 +3,7 @@ import { GuestRole, IdType, ReservationStatus } from "@prisma/client";
 import { db } from "../db";
 import { pushGuestToSheet, toSheetDate } from "../bridge/pushToSheet";
 import { syncReservations } from "../services/syncReservations";
+import { encodeCard } from "../deviceServiceClient";
 
 export const reservationsRouter = Router();
 
@@ -321,7 +322,16 @@ reservationsRouter.post("/:id/cards", async (req, res) => {
     const card = await db.card.create({
       data: { guestId, roomId: reservation.room.id, expiresAt: reservation.checkout },
     });
-    res.json({ ok: true, card });
+
+    // The DB record is the system of record and always gets created — the
+    // physical encode is best-effort on top of it. device-service isn't
+    // deployed everywhere yet, and even where it is, it can't actually
+    // encode a card until its Godrej byte layout is derived from real
+    // hardware (see device-service/src/cardLayout.ts). Either way that's the
+    // front desk's cue to hand-encode via btlock57.exe in the meantime, not
+    // a failure of card issuance itself.
+    const hardware = await encodeCard(reservation.room.roomNumber, reservation.checkout);
+    res.json({ ok: true, card, hardwareEncoded: hardware.encoded, hardwareReason: hardware.reason });
   } catch (err) {
     console.error("issue card failed:", err);
     res.status(500).json({ ok: false, error: "issue card failed" });

@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { bridge32 } from "./bridge32Client";
+import { encodeGuestCard } from "./cardLayout";
 
 const app = express();
 app.use(express.json());
@@ -28,9 +29,25 @@ app.get("/bridge/versions", async (_req, res) => {
   }
 });
 
-// There is no /cards/encode route yet — see src/cardLayout.ts for why.
-// Encoding a guest's card requires knowing Godrej's byte layout, which
-// isn't in the SDK and has to be derived from real hardware first.
+// Deliberately 501s until cardLayout.ts has a real byte layout (see that
+// file for why it doesn't yet) — this route exists now so master-api can
+// wire against a stable contract, and start actually encoding cards the
+// moment cardLayout.ts is filled in, with no callers needing a code change.
+app.post("/cards/encode", (req, res) => {
+  const roomNumber = String(req.body?.roomNumber ?? "").trim();
+  const expiresAt = req.body?.expiresAt ? new Date(req.body.expiresAt) : null;
+  if (!roomNumber || !expiresAt || Number.isNaN(expiresAt.getTime())) {
+    res.status(400).json({ ok: false, error: "roomNumber and a valid expiresAt are required" });
+    return;
+  }
+
+  try {
+    encodeGuestCard({ roomNumber, expiresAt });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(501).json({ ok: false, error: (err as Error).message });
+  }
+});
 
 const port = process.env.PORT ? Number(process.env.PORT) : 8092;
 app.listen(port, () => {
