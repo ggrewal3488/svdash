@@ -1,93 +1,76 @@
 import { Router } from "express";
-import { GuestRole, IdType } from "@prisma/client";
+import { GuestRole, IdType, ReservationStatus } from "@prisma/client";
 import { db } from "../db";
 import { pushGuestToSheet, toSheetDate } from "../bridge/pushToSheet";
-import { fetchBookings, parseGuestName } from "../bridge/fetchBookings";
+import { syncReservations } from "../services/syncReservations";
 
 export const reservationsRouter = Router();
 
-// The Bookings tab has no property column — this deployment serves one
-// property (StayVista Residences Gurgaon), so every booking is attributed to
-// the code configured here.
-function propertyConfig() {
-  return {
-    code: process.env.PROPERTY_CODE ?? "SVR-GGN",
-    name: process.env.PROPERTY_NAME ?? "StayVista Residences Gurgaon",
-  };
-}
-
 reservationsRouter.post("/sync", async (_req, res) => {
-  const synced = [];
-
   try {
-    const bookings = await fetchBookings();
-    const { code, name } = propertyConfig();
-
-    const property = await db.property.upsert({
-      where: { code },
-      update: {},
-      create: { code, name },
-    });
-
-    for (const b of bookings) {
-      if (!b.checkin || !b.checkout) {
-        console.warn(`skipping booking ${b.bookingId}: missing check-in/check-out`);
-        continue;
-      }
-
-      const reservation = await db.reservation.upsert({
-        where: { externalPmsId: b.bookingId },
-        update: {
-          checkin: new Date(b.checkin),
-          checkout: new Date(b.checkout),
-          pax: b.pax,
-          sourcePrimary: b.sourcePrimary,
-          sourceSecondary: b.sourceSecondary,
-        },
-        create: {
-          externalPmsId: b.bookingId,
-          propertyId: property.id,
-          checkin: new Date(b.checkin),
-          checkout: new Date(b.checkout),
-          pax: b.pax,
-          sourcePrimary: b.sourcePrimary,
-          sourceSecondary: b.sourceSecondary,
-        },
-      });
-
-      // The sheet names one guest per booking — the primary. Any additional
-      // pax are collected by the front desk via /:id/guests, so this only ever
-      // touches the primary link and leaves those alone.
-      const { salutation, lastName } = parseGuestName(b.guestName);
-      if (lastName) {
-        const existingLink = await db.reservationGuest.findFirst({
-          where: { reservationId: reservation.id, role: GuestRole.primary },
-        });
-
-        if (existingLink) {
-          await db.guest.update({
-            where: { id: existingLink.guestId },
-            data: { salutation, firstName: "", lastName },
-          });
-        } else {
-          const guest = await db.guest.create({
-            data: { salutation, firstName: "", lastName },
-          });
-          await db.reservationGuest.create({
-            data: { reservationId: reservation.id, guestId: guest.id, role: GuestRole.primary },
-          });
-        }
-      }
-
-      synced.push(reservation);
-    }
+    const { synced, skipped } = await syncReservations();
+    res.json({ ok: true, synced: synced.length, skipped: skipped.length, reservations: synced });
   } catch (err) {
     console.error("reservations/sync failed:", err);
     res.status(500).json({ ok: false, error: "sync failed" });
-    return;
   }
+});
 
-  res.json({ ok: true, synced: synced.length, reservations: synced });
+// The front desk's arrivals/in-house list. Includes each guest's documented
+// state so the UI can show at a glance which bookings still need ID proofs
+// collected before they can be checked in.
+reservationsRouter.get("/", async (req, res) => {
+  try {
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    if (status && !Object.values(ReservationStatus).includes(status as ReservationStatus)) {
+      res.status(400).json({
+        ok: false,
+        error: `status must be one of: ${Object.values(ReservationStatus).join(", ")}`,
+      });
+      return;
+    }
+
+    const reservations = await db.reservation.findMany({
+      where: status ? { status: status as ReservationStatus } : undefined,
+      include: {
+        room: true,
+        guests: { include: { guest: { include: { idDocuments: true } } } },
+      },
+      orderBy: { checkin: "asc" },
+    });
+
+    res.json({
+      ok: true,
+      count: reservations.length,
+      reservations: reservations.map((r) => ({
+        ...r,
+        documentedGuests: r.guests.filter((g) => g.guest.phone && g.guest.idDocuments.length > 0).length,
+      })),
+    });
+  } catch (err) {
+    console.error("list reservations failed:", err);
+    res.status(500).json({ ok: false, error: "list reservations failed" });
+  }
+});
+
+reservationsRouter.get("/:id", async (req, res) => {
+  try {
+    const reservation = await db.reservation.findUnique({
+      where: { id: req.params.id },
+      include: {
+        room: true,
+        guests: { include: { guest: { include: { idDocuments: true } } } },
+      },
+    });
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+    res.json({ ok: true, reservation });
+  } catch (err) {
+    console.error("get reservation failed:", err);
+    res.status(500).json({ ok: false, error: "get reservation failed" });
+  }
 });
 
 // Front desk capturing a guest's details at the desk: name, phone and an ID

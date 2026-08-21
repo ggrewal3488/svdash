@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Front Desk — StayVista Residences Gurgaon</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login" class="login">
+  <form id="login-form" class="card">
+    <h1>Front Desk</h1>
+    <p class="muted">Enter the API key to continue.</p>
+    <input type="password" id="api-key" placeholder="API key" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+    <p id="login-error" class="error hidden"></p>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>Front Desk</h1>
+    <nav>
+      <button data-tab="arrivals" class="tab active">Arrivals</button>
+      <button data-tab="inhouse" class="tab">In house</button>
+      <button data-tab="housekeeping" class="tab">Housekeeping</button>
+    </nav>
+    <div class="header-actions">
+      <button id="sync-btn" class="secondary">Sync sheet</button>
+      <button id="signout" class="secondary">Sign out</button>
+    </div>
+  </header>
+
+  <p id="banner" class="banner hidden"></p>
+
+  <section id="arrivals" class="panel">
+    <h2>Expected arrivals</h2>
+    <div id="arrivals-list" class="list"></div>
+  </section>
+
+  <section id="inhouse" class="panel hidden">
+    <h2>In house</h2>
+    <div id="inhouse-list" class="list"></div>
+  </section>
+
+  <section id="housekeeping" class="panel hidden">
+    <h2>Rooms</h2>
+    <div id="rooms-legend" class="legend"></div>
+    <div id="rooms-grid" class="rooms"></div>
+  </section>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-body card">
+    <h3 id="modal-title"></h3>
+    <div id="modal-content"></div>
+    <div class="modal-actions">
+      <button id="modal-close" class="secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
