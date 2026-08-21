@@ -190,3 +190,56 @@ reservationsRouter.post("/:id/check-in", async (req, res) => {
     res.status(500).json({ ok: false, error: "check-in failed" });
   }
 });
+
+// Check-out clears the room's TV. The Apps Script has no delete action, so a
+// blank lastName is how a room reads as vacant: getAllRoomsJson_ skips rows
+// with no lastName, and the TV's joinGuestName() hides the welcome line.
+reservationsRouter.post("/:id/check-out", async (req, res) => {
+  try {
+    const reservation = await db.reservation.findUnique({
+      where: { id: req.params.id },
+      include: { room: true },
+    });
+
+    if (!reservation) {
+      res.status(404).json({ ok: false, error: "reservation not found" });
+      return;
+    }
+    if (reservation.status !== "checked_in") {
+      res.status(409).json({ ok: false, error: "reservation is not checked in" });
+      return;
+    }
+    if (!reservation.room) {
+      res.status(409).json({ ok: false, error: "reservation has no room" });
+      return;
+    }
+
+    await pushGuestToSheet({
+      roomNo: reservation.room.roomNumber,
+      salutation: "",
+      lastName: "",
+      checkin: "",
+      checkout: "",
+      message: "",
+    });
+
+    // Same ordering as check-in: clear the TV first, so a failed push never
+    // leaves a checked-out room still welcoming the departed guest. The room
+    // goes to cleaning rather than available — housekeeping releases it.
+    const [updated] = await db.$transaction([
+      db.reservation.update({
+        where: { id: reservation.id },
+        data: { status: "checked_out" },
+      }),
+      db.room.update({
+        where: { id: reservation.room.id },
+        data: { status: "cleaning" },
+      }),
+    ]);
+
+    res.json({ ok: true, reservation: updated, clearedRoom: reservation.room.roomNumber });
+  } catch (err) {
+    console.error("check-out failed:", err);
+    res.status(500).json({ ok: false, error: "check-out failed" });
+  }
+});
