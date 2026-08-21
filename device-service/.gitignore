@@ -4,3 +4,6 @@ dist/
 # Vendor DLLs/drivers aren't ours to redistribute — keep any local copies
 # (e.g. dropped in for testing) out of git.
 vendor/
+# Raw Mifare block dumps from real guest key cards (dumpCard.js output) —
+# working key material and card data, not something to commit.
+bridge32/dumps/

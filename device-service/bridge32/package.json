@@ -8,6 +8,8 @@
   "scripts": {
     "start": "node server.js",
     "verify": "node verify.js",
+    "dump-card": "node dumpCard.js",
+    "diff-dumps": "node diffDumps.js",
     "service:install": "node scripts/install-service.js",
     "service:uninstall": "node scripts/uninstall-service.js"
   },

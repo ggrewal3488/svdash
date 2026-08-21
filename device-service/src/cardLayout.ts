@@ -13,15 +13,19 @@
 // front-desk hardware:
 //
 //   1. Encode one test card for one room using the real btlock57.exe app.
-//   2. Dump every sector of that card with POST /acr120/read-block on each
-//      block (0..63 for a 1K Mifare card), trying the well-known Mifare
-//      default keys (FFFFFFFFFFFF, A0A1A2A3A4A5, D3F7D3F7D3F7, ...) per
-//      sector until login() succeeds — Godrej likely didn't change every
-//      sector's key from the factory default.
+//   2. Dump every sector of that card: `npm run dump-card -- <label>` in
+//      bridge32/ (dumpCard.js) walks all 64 blocks, trying well-known
+//      Mifare default keys per sector until login() succeeds — Godrej
+//      likely didn't change every sector's key from the factory default —
+//      and writes bridge32/dumps/<label>.json.
 //   3. Encode a second test card for a different room / different expiry
-//      with btlock57.exe, dump it the same way, and diff the two raw dumps.
-//      The bytes that differ are where room number / expiry / holder live;
-//      the ones that match across both are fixed header/config bytes.
+//      with btlock57.exe, dump it the same way, then
+//      `npm run diff-dumps -- <labelA> <labelB>` (diffDumps.js) reports
+//      which block/byte offsets differ between the two raw dumps. Those
+//      are where room number / expiry / holder live; bytes identical across
+//      both are fixed header/config bytes. Dump 3+ cards (varying one field
+//      at a time — same room different expiry, same expiry different room)
+//      to separate which offset encodes which field.
 //   4. Once that mapping is confirmed against a few more real cards (and a
 //      hand-written card actually opens the real lock), encode it here as
 //      encodeGuestCard() below.
