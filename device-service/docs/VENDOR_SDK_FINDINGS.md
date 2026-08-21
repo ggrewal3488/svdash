@@ -65,48 +65,67 @@ real values, and `CH375OpenDevice(0)` returns a real device handle (`840`)
 rather than the `0xFFFFFFFF` failure sentinel. `verify.js` passes cleanly
 end to end for this device.
 
-**Still not confirmed — exact ACR120U parameter marshaling.** ACS shipped
-several DLL revisions over the years (16-bit `ACR120.dll`, several
-`ACR120U.dll` majors) with signature drift between them, and this install
-has no header file to pin down which one this is. Tested live against the
-real RW-41 reader (2026-08-21/22, confirmed present and healthy in Device
-Manager throughout) through ~25 parameter/calling-convention variants
-across `ACR120_Open`, `ACR120_RequestDLLVersion`, and `ACR120_Select`:
+**CONFIRMED (2026-08-22)** — the real ACR120U parameter marshaling, sourced
+from ACS's actual official manual: *"ACR120U Contactless Reader/Writer,
+Application Programming Interface", v3.00*, PDF at
+https://www.acs.com.hk/download-manual/428/API_ACR120U_v3.00.pdf. Its
+Appendix C lists `VID_0x072F & PID_0x8003` for the ACR120U — an exact match
+for this hardware's real Device Manager entry, confirming it's the right
+document for this exact reader, not a same-family guess. `bridge32/acr120.js`
+now implements the real signatures and is verified end to end against real
+hardware: `ACR120_RequestDLLVersion` returns a real string
+(`ACR120U DLL 1.5.1.2`), `ACR120_Open` returns a real handle, and
+`ACR120_ListTags`/`ACR120_Select` read a real card's UID.
 
-- `ACR120_Open(int32 nSlotNo) -> bool` failed 12/13 attempts across two
-  separate sessions (including 8 in a row with delays between retries — not
-  a timing issue). The one "success" (`Open(1) -> true`) never reproduced
-  and is confirmed noise, not a real signal — not carried into `acr120.js`.
-- `ACR120_Select(int32 nSlotNo, uint8_t *pSerNum) -> bool` crashed the
-  Node process outright on first attempt (zero output, immediate death) —
-  a real ABI mismatch, not just a wrong return value. A follow-up attempt
-  with a much larger output buffer (256 bytes vs. the original 16, to rule
-  out a buffer-overflow-triggered crash) was gated behind `Open` actually
-  succeeding first, which it never did, so `Select` was never safely
-  re-attempted. Whether the larger buffer would have avoided the crash is
-  still unknown.
-- `ACR120_RequestDLLVersion` — every variant returns cleanly (no crash) but
-  with a value that doesn't look like a real DLL version, across both
-  buffer and no-buffer variants.
+Why ~25 black-box variants and one crash never found this: the real API is
+nothing like what a "same family" guess would produce.
 
-`bridge32/acr120.js` still declares the signatures from ACS's most commonly
-published v3.x API manual, still flagged `UNVERIFIED`. Black-box probing
-without documentation has hit its practical ceiling here — one confirmed
-crash and no reproducible success across ~25 variants and two sessions is a
-real signal to stop guessing, not just bad luck. Next step is sourcing
-ACS's actual "API Reference Manual for ACR120" rather than continuing to
-guess at signatures with demonstrated crash risk.
+- Every function returns `INT16` (`0` = success, negative = an error code)
+  — **not** a `bool`. The old `bool __stdcall ACR120_Open(int32) `-style
+  guesses were checking truthiness of a value that was never meant to be
+  truthy in the first place, which explains both the false "success" noise
+  and the mostly-clean "failures."
+- `ACR120_Open(INT16 ReaderPort) -> INT16` returns a **handle** that every
+  other function must be given — not the port number echoed back. The
+  manual documents the port values only as symbolic
+  (`ACR120_USB1`..`ACR120_USB8`, defined in `acr120.h`, which isn't in this
+  SDK), so `acr120.js` tries each plausible value and caches whichever one
+  actually opens.
+- Several functions take more parameters than assumed:
+  `ACR120_Select` takes 4 (tag type, tag length, and serial number are
+  three separate output pointers, not one) — this specific mismatch is
+  what caused the earlier crash, since a `__stdcall` callee that expects 4
+  stack arguments and gets 2 will read garbage stack memory as its missing
+  pointers and write through them. `ACR120_RequestDLLVersion` takes 2 (a
+  length pointer *and* a buffer, not just a buffer). `ACR120_ListTags`
+  takes 5. `ACR120_Login` takes a `Sector` (not the block number the rest
+  of this module's callers use — `acr120.js` derives it internally) plus
+  an unused `StoredNo` slot.
 
-**Unknown and NOT in this SDK at all** — the actual room-card data format.
-Reading/writing raw Mifare blocks via `ACR120_Read`/`ACR120_Write` is now
-possible in principle, but *what bytes make a card open a Godrej lock*
-(which sector, which key, how room number / expiry / holder are packed into
-the block) is proprietary logic baked into `btlock57.exe`'s compiled code —
-it isn't exposed by the DLL, isn't in `tabstruc.sql` (that only has the
-*business* schema: `issuedcards`, `doors`, `cardsector` — no byte layout),
-and reverse-engineering the exe is out of scope here. See
-`src/cardLayout.ts` for the plan to derive this empirically instead of
-guessing it.
+**New blocker found once the reader actually worked: every sector on a
+real guest card is locked.** `dumpCard.js`, run against a real card
+(2026-08-22), successfully authenticated the connection to the reader but
+every one of the 16 sectors failed against every well-known Mifare default
+key — meaning Godrej rekeyed every sector on cards it issues, which is
+sound security practice (a factory-default key would let anyone clone a
+guest's card with a $10 reader) but means the dump/diff derivation plan
+can't proceed without the actual key(s) Godrej uses. Those keys aren't in
+this SDK either. The most promising path from here: intercept the raw
+`ACR120_Login` calls `btlock57.exe` itself makes while encoding a real
+card — a Windows API-monitoring tool (e.g. API Monitor, rohitab.com) can
+watch DLL calls including their parameters live, without needing to touch
+or reverse-engineer the exe's binary — since the key bytes are passed to
+`ACR120_Login` in plaintext, this would capture Godrej's actual sector
+key(s) directly. This has not been attempted yet.
+
+**Still unknown and NOT in this SDK at all** — the actual room-card data
+format. Even once a sector's key is known, *what bytes make a card open a
+Godrej lock* (how room number / expiry / holder are packed into the block)
+is proprietary logic baked into `btlock57.exe`'s compiled code — it isn't
+exposed by the DLL, isn't in `tabstruc.sql` (that only has the *business*
+schema: `issuedcards`, `doors`, `cardsector` — no byte layout), and
+reverse-engineering the exe is out of scope here. See `src/cardLayout.ts`
+for the dump/diff derivation plan once real keys are in hand.
 
 ## Architecture consequence: both DLLs are 32-bit
 

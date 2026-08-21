@@ -12,12 +12,23 @@
 // all. The layout has to be derived empirically instead, on the real
 // front-desk hardware:
 //
+//   0. BLOCKED ON (found 2026-08-22, running dumpCard.js against a real
+//      guest card for the first time): every one of the 16 sectors is
+//      locked against every well-known Mifare default key — Godrej rekeyed
+//      them, which is good security practice but means step 2 below can't
+//      proceed without knowing the actual key(s). Those aren't in the SDK
+//      either. Best lead: run a Windows API-monitoring tool (e.g. API
+//      Monitor, rohitab.com) against btlock57.exe while it encodes a real
+//      card — ACR120_Login receives the key in plaintext as a parameter,
+//      so watching that call live would capture it directly, no binary
+//      reverse-engineering needed. See docs/VENDOR_SDK_FINDINGS.md for
+//      the full writeup. Not attempted yet.
 //   1. Encode one test card for one room using the real btlock57.exe app.
 //   2. Dump every sector of that card: `npm run dump-card -- <label>` in
 //      bridge32/ (dumpCard.js) walks all 64 blocks, trying well-known
-//      Mifare default keys per sector until login() succeeds — Godrej
-//      likely didn't change every sector's key from the factory default —
-//      and writes bridge32/dumps/<label>.json.
+//      Mifare default keys per sector until login() succeeds, and writes
+//      bridge32/dumps/<label>.json. Once step 0's real key is known, add
+//      it to dumpCard.js's CANDIDATE_KEYS list.
 //   3. Encode a second test card for a different room / different expiry
 //      with btlock57.exe, dump it the same way, then
 //      `npm run diff-dumps -- <labelA> <labelB>` (diffDumps.js) reports
