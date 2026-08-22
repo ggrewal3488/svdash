@@ -1,20 +1,26 @@
+/* Stay Vista Front Desk — matches master/web/style.css's palette and
+   component patterns exactly, so the two front-desk surfaces (this PMS
+   dashboard and the Master Android app, which wraps master/web) read as
+   one product. */
 :root {
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --ink: #1b1f24;
-  --muted: #6b7280;
-  --line: #e2e5ea;
-  --accent: #1f6feb;
-  --ok: #1a7f4b;
-  --warn: #b45309;
-  --bad: #b42318;
+  --gold: #C9A257;
+  --gold-light: #E4BE6E;
+  --bg: #0D0D0D;
+  --panel: #17161499;
+  --panel-solid: #1A1917;
+  --border: rgba(255, 255, 255, 0.12);
+  --ink: #EDEDED;
+  --muted: #A8A29A;
+  --bad: #E4695B;
+  --ok: #7FBF7F;
+  --occupied: #8CA9C9;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.5 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--ink);
 }
@@ -29,15 +35,25 @@ body {
   display: grid;
   place-items: center;
   padding: 24px;
+  background: radial-gradient(circle at 50% 20%, #201d18 0%, #0D0D0D 70%);
 }
-.login .card { width: 100%; max-width: 340px; }
-.login h1 { margin: 0 0 4px; font-size: 20px; }
+.login .card { width: 100%; max-width: 340px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+.login-logo { height: 36px; margin-bottom: 14px; filter: invert(1) brightness(1.6); }
+.login h1 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gold-light);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
 .login input, .login button { width: 100%; }
+.login p.muted { text-align: left; }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   padding: 20px;
 }
 
@@ -48,64 +64,73 @@ header {
   gap: 16px;
   flex-wrap: wrap;
   padding: 14px 20px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  background: var(--panel-solid);
+  border-bottom: 1px solid var(--border);
 }
-header h1 { margin: 0; font-size: 17px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.topbar-logo { height: 24px; display: block; filter: invert(1) brightness(1.6); }
+.brand-divider { width: 1px; height: 18px; background: var(--border); }
+header h1 { margin: 0; font-size: 15px; font-weight: 600; }
 nav { display: flex; gap: 4px; }
 .header-actions { margin-left: auto; display: flex; gap: 8px; }
 
 button {
   font: inherit;
   padding: 8px 14px;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid transparent;
-  background: var(--accent);
-  color: #fff;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+  color: #1A1400;
+  font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
-button:hover { filter: brightness(1.05); }
+button:hover { opacity: 0.9; }
 button.secondary {
-  background: var(--surface);
+  background: transparent;
   color: var(--ink);
-  border-color: var(--line);
+  font-weight: 500;
+  border-color: var(--border);
 }
 button.tab {
   background: transparent;
   color: var(--muted);
+  font-weight: 500;
   border-color: transparent;
 }
-button.tab.active { background: var(--bg); color: var(--ink); }
-button:disabled { opacity: .5; cursor: not-allowed; }
+button.tab.active { background: var(--panel); color: var(--gold-light); }
+button:disabled { opacity: .4; cursor: not-allowed; }
 
 input, select {
   font: inherit;
   padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0000004d;
   color: var(--ink);
   margin-bottom: 10px;
 }
+input:focus, select:focus { outline: none; border-color: var(--gold); }
 
 .panel { padding: 20px; }
-.panel h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+.panel h2 { font-size: 15px; margin: 0 0 12px; color: var(--gold-light); font-weight: 600; }
 
 .banner {
   margin: 0;
   padding: 10px 20px;
-  background: #fef3c7;
-  border-bottom: 1px solid var(--line);
+  background: #33291a;
+  color: var(--gold-light);
+  border-bottom: 1px solid var(--border);
 }
-.banner.bad { background: #fee2e2; }
-.banner.ok { background: #dcfce7; }
+.banner.bad { background: #332120; color: var(--bad); }
+.banner.ok { background: #1d2e1f; color: var(--ok); }
 
 /* Reservation rows */
 .list { display: grid; gap: 10px; }
 .row {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 14px 16px;
   display: flex;
   align-items: center;
@@ -122,10 +147,10 @@ input, select {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
 }
 .pill.ok { color: var(--ok); border-color: currentColor; }
-.pill.warn { color: var(--warn); border-color: currentColor; }
+.pill.warn { color: var(--gold-light); border-color: currentColor; }
 .pill.bad { color: var(--bad); border-color: currentColor; }
 
 /* Housekeeping grid */
@@ -135,9 +160,9 @@ input, select {
   gap: 10px;
 }
 .room {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--line);
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: 8px;
   padding: 10px;
   cursor: pointer;
@@ -147,34 +172,34 @@ input, select {
 .room .no { font-weight: 600; }
 .room .cat { font-size: 11px; color: var(--muted); }
 .room.vacant_ready { border-left-color: var(--ok); }
-.room.vacant_dirty { border-left-color: var(--warn); }
-.room.occupied { border-left-color: var(--accent); }
+.room.vacant_dirty { border-left-color: var(--gold); }
+.room.occupied { border-left-color: var(--occupied); }
 .room.maintenance, .room.out_of_order { border-left-color: var(--bad); }
 
 .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
 .legend span::before {
   content: "";
   display: inline-block;
-  width: 10px; height: 10px;
+  width: 9px; height: 9px;
   border-radius: 2px;
   margin-right: 5px;
 }
 .legend .l-ready::before { background: var(--ok); }
-.legend .l-dirty::before { background: var(--warn); }
-.legend .l-occupied::before { background: var(--accent); }
+.legend .l-dirty::before { background: var(--gold); }
+.legend .l-occupied::before { background: var(--occupied); }
 .legend .l-ooo::before { background: var(--bad); }
 
 /* Modal */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(15, 20, 30, .45);
+  background: rgba(0, 0, 0, .65);
   display: grid;
   place-items: center;
   padding: 20px;
 }
 .modal-body { width: 100%; max-width: 420px; max-height: 85vh; overflow: auto; }
-.modal-body h3 { margin: 0 0 12px; font-size: 16px; }
+.modal-body h3 { margin: 0 0 12px; font-size: 16px; color: var(--gold-light); }
 .modal-body label { display: block; font-size: 13px; color: var(--muted); }
 .modal-body input, .modal-body select { width: 100%; }
 .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }

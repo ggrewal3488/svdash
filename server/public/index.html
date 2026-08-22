@@ -10,6 +10,7 @@
 
 <div id="login" class="login">
   <form id="login-form" class="card">
+    <img src="logo.png" class="login-logo" alt="Stay Vista Residences">
     <h1>Front Desk</h1>
     <p class="muted">Enter the API key to continue.</p>
     <input type="password" id="api-key" placeholder="API key" autocomplete="current-password" required>
@@ -20,7 +21,11 @@
 
 <div id="app" class="hidden">
   <header>
-    <h1>Front Desk</h1>
+    <div class="brand">
+      <img src="logo.png" class="topbar-logo" alt="Stay Vista Residences">
+      <span class="brand-divider"></span>
+      <h1>Front Desk</h1>
+    </div>
     <nav>
       <button data-tab="arrivals" class="tab active">Arrivals</button>
       <button data-tab="inhouse" class="tab">In house</button>
