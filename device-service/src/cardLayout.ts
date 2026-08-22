@@ -12,23 +12,26 @@
 // all. The layout has to be derived empirically instead, on the real
 // front-desk hardware:
 //
-//   0. BLOCKED ON (found 2026-08-22, running dumpCard.js against a real
-//      guest card for the first time): every one of the 16 sectors is
-//      locked against every well-known Mifare default key — Godrej rekeyed
-//      them, which is good security practice but means step 2 below can't
-//      proceed without knowing the actual key(s). Those aren't in the SDK
-//      either. Best lead: run a Windows API-monitoring tool (e.g. API
-//      Monitor, rohitab.com) against btlock57.exe while it encodes a real
-//      card — ACR120_Login receives the key in plaintext as a parameter,
-//      so watching that call live would capture it directly, no binary
-//      reverse-engineering needed. See docs/VENDOR_SDK_FINDINGS.md for
-//      the full writeup. Not attempted yet.
+//   0. DONE (2026-08-22): step 0 was originally blocked here — every
+//      sector locked against every well-known Mifare default key, meaning
+//      Godrej rekeyed them. Unblocked by running API Monitor
+//      (rohitab.com) against a real btlock57.exe encode: it loads
+//      AcsReader.dll (not ACR120U.dll — same ACR120_* export names,
+//      different filename) and calls ACR120_Login with a single, constant
+//      key across every card observed: Key A = 1ab23cd45ef6. The
+//      ACR120_Write to each sector's trailer block confirms it — Key A
+//      unchanged, access bits FF078069 (Mifare's own default), Key B
+//      FFFFFFFFFFFF — so Godrej never actually varies the key per card,
+//      it's one fixed key baked into btlock57.exe. Confirmed against real
+//      hardware: this key opens sectors 0, 1, and 2 (3-15 stay locked —
+//      unused by Godrej, or genuinely untouched factory sectors, doesn't
+//      matter which). Already added to dumpCard.js's CANDIDATE_KEYS.
+//      Full capture writeup in docs/VENDOR_SDK_FINDINGS.md.
 //   1. Encode one test card for one room using the real btlock57.exe app.
 //   2. Dump every sector of that card: `npm run dump-card -- <label>` in
 //      bridge32/ (dumpCard.js) walks all 64 blocks, trying well-known
 //      Mifare default keys per sector until login() succeeds, and writes
-//      bridge32/dumps/<label>.json. Once step 0's real key is known, add
-//      it to dumpCard.js's CANDIDATE_KEYS list.
+//      bridge32/dumps/<label>.json.
 //   3. Encode a second test card for a different room / different expiry
 //      with btlock57.exe, dump it the same way, then
 //      `npm run diff-dumps -- <labelA> <labelB>` (diffDumps.js) reports

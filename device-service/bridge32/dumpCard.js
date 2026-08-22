@@ -31,6 +31,10 @@ const BLOCKS_PER_SECTOR = 4;
 // back LOCKED, it means Godrej rekeyed it, and cracking that key is out of
 // scope here.
 const CANDIDATE_KEYS = [
+  "1ab23cd45ef6", // Godrej's real sector-0 Key A — captured 2026-08-22 via
+  // API Monitor watching btlock57.exe's own ACR120_Login calls (see
+  // docs/VENDOR_SDK_FINDINGS.md). Tried first since it's confirmed real,
+  // not a guess.
   "ffffffffffff", // factory default
   "a0a1a2a3a4a5", // NFC Forum / MAD key A
   "d3f7d3f7d3f7", // NFC Forum / MAD key B

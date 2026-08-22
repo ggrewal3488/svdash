@@ -102,30 +102,46 @@ nothing like what a "same family" guess would produce.
   of this module's callers use — `acr120.js` derives it internally) plus
   an unused `StoredNo` slot.
 
-**New blocker found once the reader actually worked: every sector on a
-real guest card is locked.** `dumpCard.js`, run against a real card
-(2026-08-22), successfully authenticated the connection to the reader but
-every one of the 16 sectors failed against every well-known Mifare default
-key — meaning Godrej rekeyed every sector on cards it issues, which is
-sound security practice (a factory-default key would let anyone clone a
-guest's card with a $10 reader) but means the dump/diff derivation plan
-can't proceed without the actual key(s) Godrej uses. Those keys aren't in
-this SDK either. The most promising path from here: intercept the raw
-`ACR120_Login` calls `btlock57.exe` itself makes while encoding a real
-card — a Windows API-monitoring tool (e.g. API Monitor, rohitab.com) can
-watch DLL calls including their parameters live, without needing to touch
-or reverse-engineer the exe's binary — since the key bytes are passed to
-`ACR120_Login` in plaintext, this would capture Godrej's actual sector
-key(s) directly. This has not been attempted yet.
+**RESOLVED (2026-08-22) — Godrej's real sector key, captured live.** Every
+sector on a real guest card came back `LOCKED` against every well-known
+Mifare default key (found running `dumpCard.js` for the first time) —
+meaning Godrej rekeyed the cards it issues, sound security practice, but a
+real blocker since those keys aren't in the SDK either. Unblocked by
+intercepting the raw calls `btlock57.exe` itself makes while encoding a
+real card, using API Monitor (rohitab.com, installed via
+`choco install apimonitor`) with a custom XML definition written for
+`ACR120U.dll`'s real signatures (see `docs/`'s parent directory history for
+that file's evolution — two iterations: fixed-size buffer params need
+`Type="BYTE [N]"`, a bracketed array on the type itself, not a
+`Length="N"` attribute, which silently decodes as 1 byte).
 
-**Still unknown and NOT in this SDK at all** — the actual room-card data
-format. Even once a sector's key is known, *what bytes make a card open a
-Godrej lock* (how room number / expiry / holder are packed into the block)
-is proprietary logic baked into `btlock57.exe`'s compiled code — it isn't
-exposed by the DLL, isn't in `tabstruc.sql` (that only has the *business*
-schema: `issuedcards`, `doors`, `cardsector` — no byte layout), and
-reverse-engineering the exe is out of scope here. See `src/cardLayout.ts`
-for the dump/diff derivation plan once real keys are in hand.
+Two things fell out of that capture:
+
+- **btlock57.exe actually loads `AcsReader.dll` at runtime, not
+  `ACR120U.dll`** — but exports the identical `ACR120_*` function names, so
+  API Monitor still matched captured calls against the `ACR120U.dll`
+  definition by function name. Worth knowing if this ever needs
+  re-deriving on a different machine/install.
+- **The key is constant, not per-card.** Every `ACR120_Login` call across
+  the whole encode sequence used the identical key: `Key A = 1ab23cd45ef6`.
+  The `ACR120_Write` to each sector's trailer block (e.g. block 3 of sector
+  0) confirmed it further — Key A unchanged, access bits `FF078069`
+  (Mifare's own default, not customized), Key B `FFFFFFFFFFFF` (also
+  default). Godrej never varies the key per card; it's one fixed value
+  compiled into `btlock57.exe`.
+
+Added to `dumpCard.js`'s `CANDIDATE_KEYS`, tried first, and confirmed
+against real hardware: opens sectors 0, 1, and 2 (3–15 stay locked — either
+unused by Godrej or genuinely untouched factory sectors; doesn't matter
+which for deriving the room-card layout).
+
+**Still unknown — the actual room-card data format.** Now that sectors
+0–2 are readable, *what bytes make a card open a Godrej lock* (how room
+number / expiry / holder are packed into the block) is the next and final
+piece — proprietary logic baked into `btlock57.exe`'s compiled code, not
+exposed by the DLL or `tabstruc.sql`. See `src/cardLayout.ts` for the
+dump/diff derivation plan (encode two cards with different rooms/expiries,
+dump both, diff the bytes) — now genuinely unblocked and ready to run.
 
 ## Architecture consequence: both DLLs are 32-bit
 
