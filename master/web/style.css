@@ -115,7 +115,7 @@ button.secondary {
 /* ----- Dashboard shell ----- */
 #dashboard {
     min-height: 100vh;
-    background: radial-gradient(circle at 50% 0%, #201d18 0%, #0D0D0D 45%);
+    background: radial-gradient(circle at 50% 0%, #332a1c 0%, #0D0D0D 65%);
 }
 
 #topbar {
