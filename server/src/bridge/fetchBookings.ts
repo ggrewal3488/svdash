@@ -1,16 +1,18 @@
-// Reads the Bookings tab of the same spreadsheet the TVs already poll, via
-// the getBookings action added to master/backend/Code.gs. This is the real
-// source of reservations — it replaced the fixture that used to stand in for
-// the property's PMS.
+// Reads the BD tab of the same spreadsheet the TVs already poll, via the
+// getBookings action added to master/backend/Code.gs. BD is auto-populated
+// from the property's channel manager — it replaced the hand-maintained
+// Bookings tab that used to stand in for the property's PMS.
 
 export interface SheetBooking {
   bookingId: string;
   guestName: string;
+  roomType: string;
   checkin: string;
   checkout: string;
   pax: number | null;
   sourcePrimary: string;
   sourceSecondary: string;
+  bookingStatus: string;
 }
 
 export async function fetchBookings(): Promise<SheetBooking[]> {

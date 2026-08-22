@@ -2,7 +2,7 @@ import { GuestRole, Reservation } from "@prisma/client";
 import { db } from "../db";
 import { fetchBookings, parseGuestName } from "../bridge/fetchBookings";
 
-// The Bookings tab has no property column — this deployment serves one
+// The BD tab has no property column — this deployment serves one
 // property (StayVista Residences Gurgaon), so every booking is attributed to
 // the code configured here.
 export function propertyConfig() {
@@ -17,8 +17,14 @@ export interface SyncResult {
   skipped: string[];
 }
 
+// BD's booking status is a channel-manager concept, not the front desk's
+// own ReservationStatus lifecycle (confirmed/checked_in/checked_out/cancelled)
+// — a cancelled booking is simply never imported, rather than mapped onto
+// that enum.
+const CANCELLED_STATUSES = new Set(["cancelled"]);
+
 /**
- * Pulls the Bookings tab into the database. Lives outside the route handler
+ * Pulls the BD tab into the database. Lives outside the route handler
  * because the scheduler runs it too — on a timer there is no request to
  * respond to, so the work can't be tangled up with res.json().
  */
@@ -40,6 +46,10 @@ export async function syncReservations(): Promise<SyncResult> {
       skipped.push(b.bookingId);
       continue;
     }
+    if (CANCELLED_STATUSES.has(b.bookingStatus.trim().toLowerCase())) {
+      skipped.push(b.bookingId);
+      continue;
+    }
 
     const reservation = await db.reservation.upsert({
       where: { externalPmsId: b.bookingId },
@@ -47,6 +57,7 @@ export async function syncReservations(): Promise<SyncResult> {
         checkin: new Date(b.checkin),
         checkout: new Date(b.checkout),
         pax: b.pax,
+        roomType: b.roomType || null,
         sourcePrimary: b.sourcePrimary,
         sourceSecondary: b.sourceSecondary,
       },
@@ -56,6 +67,7 @@ export async function syncReservations(): Promise<SyncResult> {
         checkin: new Date(b.checkin),
         checkout: new Date(b.checkout),
         pax: b.pax,
+        roomType: b.roomType || null,
         sourcePrimary: b.sourcePrimary,
         sourceSecondary: b.sourceSecondary,
       },

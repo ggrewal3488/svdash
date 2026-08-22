@@ -7,6 +7,13 @@ import { encodeCard } from "../deviceServiceClient";
 
 export const reservationsRouter = Router();
 
+// undefined = param omitted, "invalid" = present but unparseable, Date = ok.
+function parseDateParam(value: unknown): Date | undefined | "invalid" {
+  if (typeof value !== "string" || !value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "invalid" : date;
+}
+
 reservationsRouter.post("/sync", async (_req, res) => {
   try {
     const { synced, skipped } = await syncReservations();
@@ -31,8 +38,25 @@ reservationsRouter.get("/", async (req, res) => {
       return;
     }
 
+    // BD carries full booking history, not just upcoming stays, so an
+    // unbounded list here would dump years of past bookings on the front
+    // desk. checkinFrom/checkinTo let a caller (the Arrivals tab) narrow to
+    // a near-term window; omitted, the endpoint still returns everything,
+    // since /reservations/:id and other callers rely on that.
+    const checkinFrom = parseDateParam(req.query.checkinFrom);
+    const checkinTo = parseDateParam(req.query.checkinTo);
+    if (checkinFrom === "invalid" || checkinTo === "invalid") {
+      res.status(400).json({ ok: false, error: "checkinFrom/checkinTo must be valid dates" });
+      return;
+    }
+
     const reservations = await db.reservation.findMany({
-      where: status ? { status: status as ReservationStatus } : undefined,
+      where: {
+        ...(status ? { status: status as ReservationStatus } : {}),
+        ...(checkinFrom || checkinTo
+          ? { checkin: { ...(checkinFrom ? { gte: checkinFrom } : {}), ...(checkinTo ? { lte: checkinTo } : {}) } }
+          : {}),
+      },
       include: {
         room: true,
         guests: { include: { guest: { include: { idDocuments: true } } } },

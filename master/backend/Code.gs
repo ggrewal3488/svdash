@@ -379,19 +379,25 @@ function guestsSheet_() {
 }
 
 function bookingsSheet_() {
-  return getOrCreateSheet_('Bookings', [
-    'Booking Id', 'Guest Name', 'Check-In', 'Check-Out',
-    'no. Of pax', 'primary source of booking', 'secondary source'
+  // BD is auto-populated from the property's channel manager — it replaced
+  // the hand-maintained Bookings tab as the sync source. Left as a separate
+  // getOrCreateSheet_ call (rather than renaming in place) so an existing
+  // Bookings tab from before this change is untouched, just no longer read.
+  return getOrCreateSheet_('BD', [
+    'Booking ID', 'Guest Name', 'Room Type', 'Check-In', 'Check-Out',
+    'Pax', 'Primary Source', 'Secondary Source', 'Booking Status'
   ]);
 }
 
 /**
- * The Bookings tab, normalised for the Master API's /reservations/sync.
+ * The BD tab, normalised for the Master API's /reservations/sync.
  *
  * Dates are emitted as yyyy-MM-dd strings: a date-formatted cell arrives here
  * as a Date, a hand-typed one as a string, and the API should not have to care
- * which. Rows without a Booking Id are skipped — that's the blank-row case,
- * same convention getAllRoomsJson_ uses for rooms with no guest.
+ * which. Rows without a Booking ID are skipped — that's the blank-row case,
+ * same convention getAllRoomsJson_ uses for rooms with no guest. Which
+ * Booking Status values to actually sync is a call for syncReservations.ts,
+ * not this bridge — every row is passed through as-is.
  */
 function getBookingsJson_() {
   var sheet = bookingsSheet_();
@@ -404,11 +410,13 @@ function getBookingsJson_() {
     out.push({
       bookingId: bookingId,
       guestName: String(row[1] || '').trim(),
-      checkin: toSheetDate_(row[2]),
-      checkout: toSheetDate_(row[3]),
-      pax: paxOrNull_(row[4]),
-      sourcePrimary: String(row[5] || '').trim(),
-      sourceSecondary: String(row[6] || '').trim()
+      roomType: String(row[2] || '').trim(),
+      checkin: toSheetDate_(row[3]),
+      checkout: toSheetDate_(row[4]),
+      pax: paxOrNull_(row[5]),
+      sourcePrimary: String(row[6] || '').trim(),
+      sourceSecondary: String(row[7] || '').trim(),
+      bookingStatus: String(row[8] || '').trim()
     });
   }
   return out;

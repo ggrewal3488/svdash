@@ -119,6 +119,9 @@ model Reservation {
   // phone and an ID proof for each one, so this is the target guest count a
   // reservation is measured against before check-in.
   pax            Int?
+  // The BD tab's room category (e.g. "executive", "comfort") — a hint for
+  // room assignment, not a link to actual inventory the way roomId is.
+  roomType       String?
   sourcePrimary  String?
   sourceSecondary String?
   guests         ReservationGuest[]

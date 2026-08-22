@@ -109,7 +109,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
 
 function guestName(r) {
   const primary = r.guests.find((g) => g.role === "primary");
-  if (!primary) return "(no guest)";
+  if (!primary) return "No guest name";
   const { salutation, lastName } = primary.guest;
   return [salutation, lastName].filter(Boolean).join(" ");
 }
@@ -123,6 +123,12 @@ function reservationRow(r, mode) {
   const roomPill = r.room
     ? `<span class="pill">Room ${esc(r.room.roomNumber)}</span>`
     : `<span class="pill warn">no room</span>`;
+  // BD blanks the guest name on some cancelled bookings rather than always
+  // marking Booking Status cancelled, so this is a heads-up for the front
+  // desk to double-check, not a hard filter — /sync still imports the row.
+  const cancelledPill = r.guests.some((g) => g.role === "primary")
+    ? ""
+    : `<span class="pill warn">possibly cancelled</span>`;
 
   const actions = [`<button data-act="view" data-id="${r.id}" class="secondary">View</button>`];
   if (mode === "arrivals") {
@@ -142,16 +148,29 @@ function reservationRow(r, mode) {
           r.sourcePrimary ? ` · ${esc(r.sourcePrimary)}` : ""
         }</div>
       </div>
-      <div>${roomPill} ${paxPill}</div>
+      <div>${cancelledPill} ${roomPill} ${paxPill}</div>
       <div class="spacer"></div>
       <div class="actions">${actions.join("")}</div>
     </div>`;
 }
 
+// BD carries full booking history, not just upcoming stays — without a
+// window, Arrivals would list years of past bookings alongside real ones.
+// Covers a couple of days back (late/no-show follow-up) through a week
+// ahead (what the front desk actually plans around).
+function arrivalsWindow() {
+  const from = new Date();
+  from.setDate(from.getDate() - 2);
+  const to = new Date();
+  to.setDate(to.getDate() + 7);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  return `checkinFrom=${iso(from)}&checkinTo=${iso(to)}`;
+}
+
 async function refresh() {
   try {
     const [confirmed, inhouse, rooms] = await Promise.all([
-      api("/reservations?status=confirmed"),
+      api(`/reservations?status=confirmed&${arrivalsWindow()}`),
       api("/reservations?status=checked_in"),
       api("/rooms"),
     ]);
