@@ -114,6 +114,13 @@ function guestName(r) {
   return [salutation, lastName].filter(Boolean).join(" ");
 }
 
+function initials(r) {
+  const primary = r.guests.find((g) => g.role === "primary");
+  const words = primary?.guest.lastName.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (!words.length) return "?";
+  return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
+}
+
 function reservationRow(r, mode) {
   const pax = r.pax ?? 0;
   const documented = r.documentedGuests;
@@ -142,13 +149,16 @@ function reservationRow(r, mode) {
 
   return `
     <div class="row">
-      <div>
-        <div class="name">${esc(guestName(r))}</div>
-        <div class="meta">${esc(r.externalPmsId)} · ${fmt(r.checkin)} → ${fmt(r.checkout)}${
-          r.sourcePrimary ? ` · ${esc(r.sourcePrimary)}` : ""
-        }</div>
+      <div class="row-main">
+        <div class="avatar">${esc(initials(r))}</div>
+        <div>
+          <div class="name">${esc(guestName(r))}</div>
+          <div class="meta">${esc(r.externalPmsId)} · ${fmt(r.checkin)} → ${fmt(r.checkout)}${
+            r.sourcePrimary ? ` · ${esc(r.sourcePrimary)}` : ""
+          }</div>
+        </div>
       </div>
-      <div>${cancelledPill} ${roomPill} ${paxPill}</div>
+      <div class="pills">${cancelledPill} ${roomPill} ${paxPill}</div>
       <div class="spacer"></div>
       <div class="actions">${actions.join("")}</div>
     </div>`;
