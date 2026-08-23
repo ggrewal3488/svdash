@@ -293,8 +293,9 @@ function renderInHouse(rooms) {
         roomsOnFloor.forEach(function (roomNo) {
             var g = rooms[roomNo].guest || {};
             var name = ((g.salutation || "") + " " + (g.lastName || "")).trim();
-            html += "<tr><td>" + escapeHtml(roomNo) + "</td><td>" + escapeHtml(name) +
-                "</td><td>" + escapeHtml(g.checkin || "") + "</td><td>" + escapeHtml(g.checkout || "") +
+            html += "<tr><td>" + escapeHtml(roomNo) + '</td><td><div class="guest-cell"><div class="avatar">' +
+                escapeHtml(initials(g.lastName)) + "</div>" + escapeHtml(name) + "</div></td><td>" +
+                escapeHtml(g.checkin || "") + "</td><td>" + escapeHtml(g.checkout || "") +
                 "</td><td>" + escapeHtml(g.message || "") + "</td></tr>";
         });
         html += "</tbody></table></div>";
@@ -451,6 +452,12 @@ function onAddUserSubmit(e) {
 }
 
 /* ----- Utils ----- */
+function initials(lastName) {
+    var words = String(lastName || "").trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return "?";
+    return (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase();
+}
+
 function escapeHtml(str) {
     return String(str)
         .replace(/&/g, "&amp;")

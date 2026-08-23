@@ -3,14 +3,22 @@
 :root {
     --gold: #C9A257;
     --gold-light: #E4BE6E;
+    --gold-soft: rgba(201, 162, 87, 0.14);
     --bg: #0D0D0D;
     --panel: #17161499;
     --panel-solid: #1A1917;
+    --panel-raised: #211F1B;
     --border: rgba(255, 255, 255, 0.12);
+    --border-soft: rgba(255, 255, 255, 0.07);
     --text: #EDEDED;
     --text-muted: #A8A29A;
     --danger: #E4695B;
+    --danger-soft: rgba(228, 105, 91, 0.12);
     --ok: #7FBF7F;
+    --ok-soft: rgba(127, 191, 127, 0.12);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 20px -6px rgba(0, 0, 0, 0.5);
+    --radius: 12px;
 }
 
 * { box-sizing: border-box; }
@@ -22,6 +30,15 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
 }
+
+::selection { background: var(--gold-soft); color: var(--gold-light); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .hidden { display: none !important; }
 
@@ -95,10 +112,12 @@ button {
     background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
     color: #1A1400;
     font-weight: 600;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: var(--shadow-sm);
 }
 
-button:hover { opacity: 0.9; }
+button:hover { opacity: 0.9; box-shadow: var(--shadow-md); }
+button:active { transform: translateY(1px); box-shadow: none; }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 button.secondary {
@@ -125,6 +144,9 @@ button.secondary {
     padding: 0.9rem 1.5rem;
     border-bottom: 1px solid var(--border);
     background: var(--panel-solid);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .topbar-logo { height: 30px; filter: invert(1) brightness(1.6); }
@@ -222,6 +244,22 @@ th {
 }
 
 tr:last-child td { border-bottom: none; }
+
+.guest-cell { display: flex; align-items: center; gap: 0.6rem; }
+.avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--panel-raised);
+    border: 1px solid var(--border-soft);
+    color: var(--gold-light);
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 #tab-users h3 { color: var(--gold-light); font-size: 0.95rem; margin: 1.5rem 0 0.75rem; }
 #add-user-form {
