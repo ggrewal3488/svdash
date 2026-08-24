@@ -9,6 +9,13 @@ import { google } from "googleapis";
 // to do anything (see .env.example) — the service account also has to be
 // shared on that folder as a Content Manager, the same as sharing it with a
 // person.
+//
+// Compliance decisions (2026-08-24): access control is exactly Drive's own
+// folder sharing — whoever is added to ID_SCAN_DRIVE_FOLDER_ID can see the
+// scans, no separate app-level ACL. Encryption at rest is Drive's own
+// infrastructure (AES-256), not something this app does. Retention is
+// indefinite/manual — no auto-delete job — so removing a scan is on
+// whoever manages that folder.
 const FOLDER_ID = process.env.ID_SCAN_DRIVE_FOLDER_ID ?? "";
 
 function driveClient() {
