@@ -1,9 +1,14 @@
 "use strict";
 
-// The key lives in sessionStorage, not localStorage: a shared front-desk
+// The session lives in sessionStorage, not localStorage: a shared front-desk
 // machine shouldn't stay signed in after the browser closes.
-const KEY_STORE = "master-api-key";
-let apiKey = sessionStorage.getItem(KEY_STORE) || "";
+const SESSION_KEY = "front-desk-session";
+let session = null; // { token, username, role }
+try {
+  session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+} catch {
+  session = null;
+}
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -16,7 +21,7 @@ async function api(path, options = {}) {
     ...options,
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
-      "x-api-key": apiKey,
+      "x-api-key": session?.token || "",
       ...(options.headers || {}),
     },
   });
@@ -41,19 +46,19 @@ function banner(message, kind = "") {
 
 $("#login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const candidate = $("#api-key").value.trim();
+  const username = $("#login-username").value.trim();
+  const password = $("#login-password").value;
   const err = $("#login-error");
   err.classList.add("hidden");
   try {
-    // Verify before storing, so a bad key fails here rather than on every
-    // subsequent request.
-    const res = await fetch("/auth/verify", {
+    const res = await fetch("/auth/login", {
       method: "POST",
-      headers: { "x-api-key": candidate },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
-    if (!res.ok) throw new Error("Invalid key");
-    apiKey = candidate;
-    sessionStorage.setItem(KEY_STORE, apiKey);
+    const data = await res.json().catch(() => ({ ok: false, error: "bad response" }));
+    if (!data.ok) throw new Error(data.error || "Invalid username or password");
+    setSession({ token: data.token, username: data.username, role: data.role });
     showApp();
   } catch (e2) {
     err.textContent = e2.message;
@@ -61,9 +66,15 @@ $("#login-form").addEventListener("submit", async (e) => {
   }
 });
 
+function setSession(next) {
+  session = next;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
 function signOut() {
-  apiKey = "";
-  sessionStorage.removeItem(KEY_STORE);
+  session = null;
+  sessionStorage.removeItem(SESSION_KEY);
+  $("#login-form").reset();
   $("#app").classList.add("hidden");
   $("#login").classList.remove("hidden");
 }
@@ -73,17 +84,22 @@ $("#signout").addEventListener("click", signOut);
 function showApp() {
   $("#login").classList.add("hidden");
   $("#app").classList.remove("hidden");
+  $("#user-label").textContent = `${session.username} · ${session.role}`;
+  document.querySelectorAll(".admin-only").forEach((el) => el.classList.toggle("hidden", session.role !== "Admin"));
   refresh();
 }
 
 /* ---------- tabs ---------- */
 
+const TABS = ["arrivals", "inhouse", "housekeeping", "update-tv", "users"];
+
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
-    ["arrivals", "inhouse", "housekeeping"].forEach((id) => {
+    TABS.forEach((id) => {
       $(`#${id}`).classList.toggle("hidden", id !== btn.dataset.tab);
     });
+    if (btn.dataset.tab === "users") loadUsers();
   });
 });
 
@@ -460,6 +476,128 @@ document.addEventListener("click", async (e) => {
   }
 });
 
+/* ---------- update tv ---------- */
+
+$("#update-tv-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const roomNo = $("#tv-room").value.trim();
+  const statusEl = $("#tv-status");
+  if (!roomNo) return;
+
+  const data = {
+    salutation: $("#tv-sal").value,
+    lastName: $("#tv-name").value.trim(),
+    checkin: $("#tv-checkin").value,
+    checkout: $("#tv-checkout").value,
+    message: $("#tv-message").value.trim(),
+  };
+
+  statusEl.textContent = "Checking room…";
+  statusEl.className = "status span-2";
+  try {
+    const { room: existing } = await api(`/tv/${encodeURIComponent(roomNo)}`);
+    if (existing && existing.lastName) {
+      const name = [existing.salutation, existing.lastName].filter(Boolean).join(" ");
+      openModal(
+        "Room already occupied",
+        `<p>Room ${esc(roomNo)} currently has ${esc(name)}${
+          existing.checkout ? `, checking out ${esc(existing.checkout)}` : ""
+        }. Pushing new details will overwrite this record.</p>
+         <label class="checkbox-row"><input type="checkbox" id="m-confirm"> Yes, overwrite this room's guest details</label>
+         <div class="modal-actions">
+           <button type="button" id="m-cancel" class="secondary">Cancel</button>
+           <button type="button" id="m-save" disabled>Confirm &amp; push</button>
+         </div>`,
+      );
+      $("#m-confirm").addEventListener("change", (ev) => {
+        $("#m-save").disabled = !ev.target.checked;
+      });
+      $("#m-cancel").addEventListener("click", closeModal);
+      $("#m-save").addEventListener("click", async () => {
+        closeModal();
+        await pushToTv(roomNo, data, statusEl);
+      });
+      statusEl.textContent = "";
+    } else {
+      await pushToTv(roomNo, data, statusEl);
+    }
+  } catch (err) {
+    statusEl.textContent = "Could not check room — try again";
+    statusEl.className = "status span-2 error";
+  }
+});
+
+async function pushToTv(roomNo, data, statusEl) {
+  statusEl.textContent = "Pushing…";
+  statusEl.className = "status span-2";
+  $("#tv-push-btn").disabled = true;
+  try {
+    await api(`/tv/${encodeURIComponent(roomNo)}`, { method: "POST", body: JSON.stringify(data) });
+    statusEl.textContent = `Room ${roomNo} saved — TV refreshes within a minute`;
+    statusEl.className = "status span-2 ok";
+    $("#update-tv-form").reset();
+  } catch (err) {
+    statusEl.textContent = err.message || "Push failed";
+    statusEl.className = "status span-2 error";
+  } finally {
+    $("#tv-push-btn").disabled = false;
+  }
+}
+
+/* ---------- users ---------- */
+
+async function loadUsers() {
+  if (session?.role !== "Admin") return;
+  const list = $("#users-list");
+  list.innerHTML = `<p class="muted">Loading…</p>`;
+  try {
+    const { users } = await api("/auth/users");
+    list.innerHTML = users.length
+      ? users
+          .map(
+            (u) => `
+        <div class="row">
+          <div>
+            <div class="name">${esc(u.username)} <span class="pill">${esc(u.role)}</span></div>
+            <div class="meta">Added ${fmt(u.createdAt)}</div>
+          </div>
+        </div>`,
+          )
+          .join("")
+      : `<p class="muted">No users yet.</p>`;
+  } catch (err) {
+    list.innerHTML = `<p class="status error">${esc(err.message)}</p>`;
+  }
+}
+
+$("#add-user-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const statusEl = $("#nu-status");
+  statusEl.textContent = "Creating…";
+  statusEl.className = "status span-2";
+  try {
+    await api("/auth/users", {
+      method: "POST",
+      body: JSON.stringify({
+        username: $("#nu-username").value.trim(),
+        password: $("#nu-password").value,
+        role: $("#nu-role").value,
+      }),
+    });
+    statusEl.textContent = "User created";
+    statusEl.className = "status span-2 ok";
+    $("#add-user-form").reset();
+    await loadUsers();
+  } catch (err) {
+    statusEl.textContent = err.message || "Could not create user";
+    statusEl.className = "status span-2 error";
+  }
+});
+
 /* ---------- boot ---------- */
 
-if (apiKey) showApp();
+if (session) {
+  fetch("/auth/verify", { headers: { "x-api-key": session.token } })
+    .then((res) => (res.ok ? showApp() : signOut()))
+    .catch(() => signOut());
+}
