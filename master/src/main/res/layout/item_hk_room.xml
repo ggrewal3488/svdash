@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical"
+    android:background="@android:color/white"
+    android:layout_marginBottom="8dp">
+
+    <TextView
+        android:id="@+id/tvHkRoomTag"
+        android:layout_width="45dp"
+        android:layout_height="wrap_content"
+        android:background="#C9A257"
+        android:padding="6dp"
+        android:text="408"
+        android:textAlignment="center"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:layout_marginEnd="16dp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvHkRoomStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Vacant Ready"
+            android:textColor="#333333"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHkRoomMeta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Updated by ggrewal"
+            android:textColor="#999999"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+</LinearLayout>

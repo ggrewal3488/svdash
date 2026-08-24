@@ -261,8 +261,8 @@ tr:last-child td { border-bottom: none; }
     justify-content: center;
 }
 
-#tab-users h3 { color: var(--gold-light); font-size: 0.95rem; margin: 1.5rem 0 0.75rem; }
-#add-user-form {
+#tab-users h3, #tab-hk h3 { color: var(--gold-light); font-size: 0.95rem; margin: 1.5rem 0 0.75rem; }
+#add-user-form, #hk-update-form {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 1rem;
@@ -272,8 +272,10 @@ tr:last-child td { border-bottom: none; }
     padding: 1.25rem;
     align-items: end;
 }
-#add-user-form button { grid-column: span 1; }
-#add-user-form .status { grid-column: 1 / -1; }
+#add-user-form button, #hk-update-form button { grid-column: span 1; }
+#add-user-form .status, #hk-update-form .status { grid-column: 1 / -1; }
+
+#hk-rooms-table, #hk-log-table { margin-bottom: 1.5rem; }
 
 /* ----- Content tab (center card promos) ----- */
 .guidelines-box {
@@ -368,6 +370,6 @@ tr:last-child td { border-bottom: none; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; }
 
 @media (max-width: 640px) {
-    #update-form, #add-user-form { grid-template-columns: 1fr; }
+    #update-form, #add-user-form, #hk-update-form { grid-template-columns: 1fr; }
     #topbar { flex-wrap: wrap; gap: 0.75rem; }
 }

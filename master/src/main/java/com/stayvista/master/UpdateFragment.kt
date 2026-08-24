@@ -32,6 +32,12 @@ class UpdateFragment : Fragment() {
         val salutations = arrayOf("", "Mr.", "Ms.", "Mr. & Mrs.", "Dr.")
         spSalutation.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, salutations)
 
+        if (!Session.canWrite(Session.TAB_UPDATE)) {
+            listOf(etRoomNumber, spSalutation, etLastName, etCheckin, etCheckout, etMessage, btnPush)
+                .forEach { it.isEnabled = false }
+            return view
+        }
+
         etCheckin.setOnClickListener { showDatePicker(etCheckin) }
         etCheckout.setOnClickListener { showDatePicker(etCheckout) }
 
@@ -48,6 +54,7 @@ class UpdateFragment : Fragment() {
                 put("checkin", etCheckin.text.toString())
                 put("checkout", etCheckout.text.toString())
                 put("message", etMessage.text.toString())
+                Session.token?.let { put("token", it) }
             }
 
             btnPush.isEnabled = false

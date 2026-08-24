@@ -47,6 +47,10 @@ class ContentFragment : Fragment() {
         tvStatus = view.findViewById(R.id.tvContentStatus)
         btnAddImage = view.findViewById(R.id.btnAddImage)
 
+        val canWrite = Session.canWrite(Session.TAB_CONTENT)
+        btnAddImage.isEnabled = canWrite
+        if (!canWrite) btnAddImage.visibility = View.GONE
+
         btnAddImage.setOnClickListener {
             if (promoList.size >= maxActivePromos) {
                 Toast.makeText(context, "Maximum of $maxActivePromos images already uploaded — delete one first", Toast.LENGTH_LONG).show()
@@ -83,7 +87,7 @@ class ContentFragment : Fragment() {
                     promoList.sortBy { it.order }
                     activity?.runOnUiThread {
                         tvStatus.text = "${promoList.size} of $maxActivePromos images active"
-                        rvPromos.adapter = PromoAdapter(promoList, client) { id -> deletePromo(id) }
+                        rvPromos.adapter = PromoAdapter(promoList, client, Session.canWrite(Session.TAB_CONTENT)) { id -> deletePromo(id) }
                     }
                 } catch (e: Exception) {
                     activity?.runOnUiThread { tvStatus.text = "No promotional images yet" }
@@ -126,6 +130,7 @@ class ContentFragment : Fragment() {
             put("imageBase64", Base64.encodeToString(bytes, Base64.NO_WRAP))
             put("mimeType", mimeType)
             put("filename", "promo")
+            Session.token?.let { put("token", it) }
         }
 
         val body = data.toString().toRequestBody("application/json".toMediaTypeOrNull())
@@ -155,6 +160,7 @@ class ContentFragment : Fragment() {
         val data = JSONObject().apply {
             put("action", "deletePromo")
             put("id", id)
+            Session.token?.let { put("token", it) }
         }
         val body = data.toString().toRequestBody("application/json".toMediaTypeOrNull())
         val request = Request.Builder().url(apiUrl).post(body).build()
@@ -190,6 +196,7 @@ class ContentFragment : Fragment() {
     class PromoAdapter(
         private val promos: List<Promo>,
         private val client: OkHttpClient,
+        private val canDelete: Boolean,
         private val onDelete: (String) -> Unit
     ) : RecyclerView.Adapter<PromoAdapter.ViewHolder>() {
 
@@ -208,6 +215,7 @@ class ContentFragment : Fragment() {
             val promo = promos[position]
             holder.tvOrder.text = "Promo #${promo.order}"
             holder.ivThumb.setImageBitmap(null)
+            holder.btnDelete.visibility = if (canDelete) View.VISIBLE else View.GONE
             holder.btnDelete.setOnClickListener { onDelete(promo.id) }
             loadThumbnail(promo.url, holder.ivThumb)
         }
