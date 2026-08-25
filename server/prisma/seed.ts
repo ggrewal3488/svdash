@@ -19,6 +19,10 @@ const PROPERTY_NAME = process.env.PROPERTY_NAME ?? "StayVista Residences Gurgaon
  *   x09 on every floor  -> comfort      (109, 209, 309, 409)   =  4
  *   405-408             -> office suite                        =  4
  *   everything else     -> executive                           = 28
+ *
+ * Confirmed against the property's own numbering on 2026-08-25 — the
+ * executive range is the remainder, not a guess, so a room missing here is a
+ * bug in this list rather than a room the front desk simply can't assign.
  */
 const FLOORS = [1, 2, 3, 4];
 const ROOMS_PER_FLOOR = 9;
