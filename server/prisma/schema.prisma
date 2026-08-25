@@ -50,9 +50,18 @@ enum CardStatus {
   revoked
 }
 
+// Admin: full access, and the only role that can manage users.
+// FrontDesk: the normal reception toolset (Arrivals/In House/Housekeeping/
+// Update TV) minus user management.
+// Housekeeping: room attendants and their supervisor alike — only the
+// Housekeeping worksheet, but with write access there (room status changes).
+// BOH (Back Office): can see every tab FrontDesk can, but read-only —
+// enforced server-side per route, not just hidden in the UI.
 enum UserRole {
   Admin
-  User
+  FrontDesk
+  Housekeeping
+  BOH
 }
 
 // Front-desk logins for server/public — mirrors master/web's own Users tab
@@ -62,7 +71,7 @@ model User {
   id           String   @id @default(cuid())
   username     String   @unique
   passwordHash String
-  role         UserRole @default(User)
+  role         UserRole @default(FrontDesk)
   createdAt    DateTime @default(now())
 }
 

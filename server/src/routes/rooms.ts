@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { RoomStatus } from "@prisma/client";
 import { db } from "../db";
+import { logRoomStatus } from "../bridge/pushToSheet";
 
 export const roomsRouter = Router();
 
@@ -56,6 +57,15 @@ roomsRouter.post("/:roomNumber/ready", async (req, res) => {
       where: { id: room.id },
       data: { status: RoomStatus.vacant_ready },
     });
+
+    logRoomStatus({
+      roomNo: updated.roomNumber,
+      previousStatus: room.status,
+      newStatus: updated.status,
+      username: req.user!.username,
+      role: req.user!.role,
+    }).catch((err) => console.error("HK log failed (room marked ready anyway):", err));
+
     res.json({ ok: true, room: updated });
   } catch (err) {
     console.error("mark room ready failed:", err);
@@ -95,6 +105,15 @@ roomsRouter.post("/:roomNumber/status", async (req, res) => {
       where: { id: room.id },
       data: { status: status as RoomStatus },
     });
+
+    logRoomStatus({
+      roomNo: updated.roomNumber,
+      previousStatus: room.status,
+      newStatus: updated.status,
+      username: req.user!.username,
+      role: req.user!.role,
+    }).catch((err) => console.error("HK log failed (room status changed anyway):", err));
+
     res.json({ ok: true, room: updated });
   } catch (err) {
     console.error("set room status failed:", err);

@@ -81,11 +81,48 @@ function signOut() {
 
 $("#signout").addEventListener("click", signOut);
 
+// Admin sees everything. FrontDesk gets the normal reception toolset minus
+// user management. Housekeeping is restricted to its one worksheet — both
+// room attendants and their supervisor get this same role, no split. BOH
+// sees every tab FrontDesk does, but every write path is gated off by
+// canWrite() below (and enforced server-side regardless — see auth.ts).
+const TAB_ACCESS = {
+  Admin: ["arrivals", "inhouse", "housekeeping", "update-tv", "users"],
+  FrontDesk: ["arrivals", "inhouse", "housekeeping", "update-tv"],
+  Housekeeping: ["housekeeping"],
+  BOH: ["arrivals", "inhouse", "housekeeping", "update-tv"],
+};
+const canWrite = () => session?.role !== "BOH";
+
 function showApp() {
   $("#login").classList.add("hidden");
   $("#app").classList.remove("hidden");
   $("#user-label").textContent = `${session.username} · ${session.role}`;
-  document.querySelectorAll(".admin-only").forEach((el) => el.classList.toggle("hidden", session.role !== "Admin"));
+
+  const allowed = TAB_ACCESS[session.role] || [];
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.classList.toggle("hidden", !allowed.includes(btn.dataset.tab));
+  });
+  $("#sync-btn").classList.toggle("hidden", !canWrite());
+
+  // Disabling the inputs (not just the submit button) closes the gap where
+  // hitting Enter in a text field submits a form whose only button is
+  // disabled — belt-and-suspenders alongside the server-side 403.
+  const writable = canWrite();
+  $("#update-tv-form")
+    .querySelectorAll("input, select, textarea, button")
+    .forEach((el) => (el.disabled = !writable));
+  $("#update-tv-form").previousElementSibling.textContent = writable
+    ? "Manual override — normal check-ins already do this automatically. Use this for a walk-in, a correction, or a message-only update."
+    : "View only — your role can see the TV bridge but can't push changes to it.";
+
+  // Land on whatever tab is both marked active and actually allowed —
+  // Housekeeping never sees "arrivals" (the default active tab in the
+  // markup), so this sends it straight to its one tab instead.
+  const activeBtn = document.querySelector(".tab.active");
+  const target = activeBtn && allowed.includes(activeBtn.dataset.tab) ? activeBtn : document.querySelector(`.tab[data-tab="${allowed[0]}"]`);
+  target?.click();
+
   refresh();
 }
 
@@ -153,14 +190,18 @@ function reservationRow(r, mode) {
     ? ""
     : `<span class="pill warn">possibly cancelled</span>`;
 
+  // View is read-only, so it's the one action BOH keeps — everything else
+  // here mutates something, which is exactly what "view only" excludes.
   const actions = [`<button data-act="view" data-id="${r.id}" class="secondary">View</button>`];
-  if (mode === "arrivals") {
-    actions.push(`<button data-act="room" data-id="${r.id}" class="secondary">${r.room ? "Change room" : "Assign room"}</button>`);
-    actions.push(`<button data-act="guest" data-id="${r.id}" class="secondary">Add guest</button>`);
-    actions.push(`<button data-act="checkin" data-id="${r.id}" ${r.room && ready ? "" : "disabled"}>Check in</button>`);
-  } else {
-    actions.push(`<button data-act="card" data-id="${r.id}" class="secondary">Issue card</button>`);
-    actions.push(`<button data-act="checkout" data-id="${r.id}">Check out</button>`);
+  if (canWrite()) {
+    if (mode === "arrivals") {
+      actions.push(`<button data-act="room" data-id="${r.id}" class="secondary">${r.room ? "Change room" : "Assign room"}</button>`);
+      actions.push(`<button data-act="guest" data-id="${r.id}" class="secondary">Add guest</button>`);
+      actions.push(`<button data-act="checkin" data-id="${r.id}" ${r.room && ready ? "" : "disabled"}>Check in</button>`);
+    } else {
+      actions.push(`<button data-act="card" data-id="${r.id}" class="secondary">Issue card</button>`);
+      actions.push(`<button data-act="checkout" data-id="${r.id}">Check out</button>`);
+    }
   }
 
   return `
@@ -195,18 +236,24 @@ function arrivalsWindow() {
 
 async function refresh() {
   try {
-    const [confirmed, inhouse, rooms] = await Promise.all([
-      api(`/reservations?status=confirmed&${arrivalsWindow()}`),
-      api("/reservations?status=checked_in"),
-      api("/rooms"),
-    ]);
+    // Housekeeping can't reach /reservations at all (403 — see auth.ts's
+    // requireFrontDeskArea), and never sees the tabs that need it. Fetching
+    // it anyway would fail the whole refresh, rooms included, over data this
+    // role was never going to render.
+    if (session.role !== "Housekeeping") {
+      const [confirmed, inhouse] = await Promise.all([
+        api(`/reservations?status=confirmed&${arrivalsWindow()}`),
+        api("/reservations?status=checked_in"),
+      ]);
+      $("#arrivals-list").innerHTML =
+        confirmed.reservations.map((r) => reservationRow(r, "arrivals")).join("") ||
+        `<p class="muted">No expected arrivals.</p>`;
+      $("#inhouse-list").innerHTML =
+        inhouse.reservations.map((r) => reservationRow(r, "inhouse")).join("") ||
+        `<p class="muted">Nobody in house.</p>`;
+    }
 
-    $("#arrivals-list").innerHTML =
-      confirmed.reservations.map((r) => reservationRow(r, "arrivals")).join("") ||
-      `<p class="muted">No expected arrivals.</p>`;
-    $("#inhouse-list").innerHTML =
-      inhouse.reservations.map((r) => reservationRow(r, "inhouse")).join("") ||
-      `<p class="muted">Nobody in house.</p>`;
+    const rooms = await api("/rooms");
 
     $("#rooms-legend").innerHTML = `
       <span class="l-ready">Ready</span>
@@ -216,7 +263,7 @@ async function refresh() {
     $("#rooms-grid").innerHTML = rooms.rooms
       .map(
         (rm) => `
-        <button class="room ${rm.status}" data-act="room-status" data-no="${esc(rm.roomNumber)}" data-status="${rm.status}">
+        <button class="room ${rm.status}" data-act="room-status" data-no="${esc(rm.roomNumber)}" data-status="${rm.status}" ${canWrite() ? "" : "disabled"}>
           <div class="no">${esc(rm.roomNumber)}</div>
           <div class="cat">${esc(rm.category.replace("_", " "))}</div>
           <div class="cat">${esc(rm.status.replace("_", " "))}</div>

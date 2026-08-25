@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { join } from "path";
-import { requireAuth } from "./auth";
+import { requireAuth, requireFrontDeskArea, requireRoomsArea } from "./auth";
 import { startSyncScheduler } from "./scheduler";
 import { authRouter } from "./routes/auth";
 import { reservationsRouter } from "./routes/reservations";
@@ -23,11 +23,15 @@ app.use("/", express.static(join(__dirname, "..", "public")));
 app.use("/auth", authRouter);
 
 // Everything past here touches guest PII or moves guests between rooms.
-app.use("/reservations", requireAuth, reservationsRouter);
-app.use("/rooms", requireAuth, roomsRouter);
-app.use("/cards", requireAuth, cardsRouter);
-app.use("/id-documents", requireAuth, idDocumentsRouter);
-app.use("/tv", requireAuth, tvRouter);
+// requireFrontDeskArea/requireRoomsArea (see auth.ts) enforce the role
+// matrix: Admin and FrontDesk get full access to both areas; Housekeeping
+// only ever reaches /rooms, and only there can it write; BOH can GET
+// anything but POST nothing, anywhere.
+app.use("/reservations", requireAuth, requireFrontDeskArea, reservationsRouter);
+app.use("/rooms", requireAuth, requireRoomsArea, roomsRouter);
+app.use("/cards", requireAuth, requireFrontDeskArea, cardsRouter);
+app.use("/id-documents", requireAuth, requireFrontDeskArea, idDocumentsRouter);
+app.use("/tv", requireAuth, requireFrontDeskArea, tvRouter);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 8080;
 app.listen(port, () => {

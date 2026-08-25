@@ -89,3 +89,28 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
   next();
 }
+
+/**
+ * Role gates for the two resource areas below Admin. Both let BOH through
+ * read-only (view every tab, input nothing) rather than blocking it
+ * entirely — the actual "cannot input anything" restriction is enforcing
+ * GET-only, not hiding data. Housekeeping is the mirror image: write access,
+ * but only within its one area, nothing in the front-desk area at all.
+ */
+
+// Reservations, cards, ID documents, TV push — the reception toolset.
+// Housekeeping has no business here, not even to look.
+export function requireFrontDeskArea(req: Request, res: Response, next: NextFunction) {
+  const role = req.user?.role;
+  if (role === UserRole.Admin || role === UserRole.FrontDesk) return next();
+  if (role === UserRole.BOH && req.method === "GET") return next();
+  res.status(403).json({ ok: false, error: "forbidden" });
+}
+
+// Rooms / the housekeeping worksheet — the one area Housekeeping can write to.
+export function requireRoomsArea(req: Request, res: Response, next: NextFunction) {
+  const role = req.user?.role;
+  if (role === UserRole.Admin || role === UserRole.FrontDesk || role === UserRole.Housekeeping) return next();
+  if (role === UserRole.BOH && req.method === "GET") return next();
+  res.status(403).json({ ok: false, error: "forbidden" });
+}

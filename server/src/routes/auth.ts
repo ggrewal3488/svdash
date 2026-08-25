@@ -51,10 +51,14 @@ authRouter.get("/users", requireAuth, requireAdmin, async (_req, res) => {
 authRouter.post("/users", requireAuth, requireAdmin, async (req, res) => {
   const username = String(req.body?.username ?? "").trim();
   const password = String(req.body?.password ?? "");
-  const role = req.body?.role === "Admin" ? UserRole.Admin : UserRole.User;
+  const role = req.body?.role;
 
   if (!username || password.length < 8) {
     res.status(400).json({ ok: false, error: "username is required and password must be at least 8 characters" });
+    return;
+  }
+  if (!Object.values(UserRole).includes(role)) {
+    res.status(400).json({ ok: false, error: `role must be one of: ${Object.values(UserRole).join(", ")}` });
     return;
   }
 

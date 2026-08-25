@@ -70,3 +70,33 @@ export async function getSheetRoom(roomNo: string): Promise<SheetRoom> {
   }
   return data;
 }
+
+export interface RoomStatusLogEntry {
+  roomNo: string;
+  previousStatus: string;
+  newStatus: string;
+  username: string;
+  role: string;
+}
+
+// Every room status change (housekeeping worksheet writes, from any role
+// that can reach them) gets appended to the same Hotel DB sheet as an audit
+// trail — logRoomStatus_ in master/backend/Code.gs. Best-effort: a logging
+// failure shouldn't undo a real room status change, so callers should treat
+// this as fire-and-forget the way pushGuestToSheet's callers don't (that one
+// gates the TV, this one is just a record).
+export async function logRoomStatus(entry: RoomStatusLogEntry): Promise<void> {
+  const bridgeUrl = process.env.BRIDGE_SHEET_URL;
+  const deviceKey = process.env.BRIDGE_DEVICE_KEY;
+  if (!bridgeUrl || !deviceKey) return;
+
+  const res = await fetch(bridgeUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "logRoomStatus", key: deviceKey, ...entry }),
+  });
+  const data = (await res.json()) as { ok: boolean; error?: string };
+  if (!data.ok) {
+    throw new Error(`Room status log failed for room ${entry.roomNo}: ${data.error ?? "unknown error"}`);
+  }
+}
