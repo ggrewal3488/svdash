@@ -28,14 +28,20 @@
  *   GET  ?action=verify&token=...          -> { ok, username, role }
  *   GET  ?action=listUsers&token=...       -> admin only
  *   GET  ?action=getPromos                 -> active promo images (id, url, hash, order), unauthenticated
+ *   GET  ?action=listHousekeeping&token=... -> current status per room + recent log entries
  *   POST { action: 'login', ... }
  *   POST { action: 'createUser', ... }     -> admin only
  *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
  *   POST { action: 'deletePromo', id, token? } -> remove a promo image
- *   POST { action: 'logRoomStatus', roomNo, previousStatus, newStatus, username, role, key|token }
- *                                           -> append a row to the HK Log sheet (server/'s room status changes)
+ *   POST { action: 'updateHousekeeping', roomNo, status, notes?, token } -> Admin/Housekeeping only, appends to the log
  *   POST { roomNo, ... }                   -> push/overwrite a room's guest (action omitted or 'pushGuest')
  *   GET  ?action=getBookings&(token=...|key=...) -> the Bookings tab, for the Master API's reservation sync
+ *
+ * Roles: Admin (everything, only role that can create users), Front Desk
+ * (guest push, in-house, content -- the old 'User' role, still accepted on
+ * login/tokens for accounts created before this rename), Housekeeping (HK
+ * tab only), BOH (read-only across every tab). See ROLE_CAPS below for the
+ * exact capability grants.
  */
 
 var SECRET = 'CHANGE-ME-BEFORE-DEPLOYING-A-LONG-RANDOM-STRING';
@@ -48,6 +54,30 @@ var SALT = 'CHANGE-ME-TOO-ANOTHER-RANDOM-STRING';
 // same pattern as the release-signing keystore.
 var DEVICE_KEY = 'CHANGE-ME-DEVICE-KEY-BEFORE-DEPLOYING';
 var TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+var ROLES = ['Admin', 'Front Desk', 'Housekeeping', 'BOH'];
+
+// Capability grants per role. 'guests' = Update/In-House tabs (push +
+// read), 'promos' = Content tab uploads (reading the promo grid is public,
+// unauthenticated -- see getPromosJson_), 'housekeeping' = the HK tab,
+// 'users' = the Users tab. Every role gets *:read implicitly through
+// hasCapability_ below; only the roles listed here get *:write.
+var ROLE_CAPS = {
+  'Admin':         { read: ['guests', 'promos', 'housekeeping', 'users'], write: ['guests', 'promos', 'housekeeping', 'users'] },
+  'Front Desk':    { read: ['guests', 'promos'],                          write: ['guests', 'promos'] },
+  'Housekeeping':  { read: ['housekeeping'],                              write: ['housekeeping'] },
+  'BOH':           { read: ['guests', 'promos', 'housekeeping', 'users'], write: [] }
+};
+
+/** Accounts created before the Front Desk rename still have role 'User' in the sheet. */
+function normalizeRole_(role) {
+  return role === 'User' ? 'Front Desk' : role;
+}
+
+function hasCapability_(role, kind, tab) {
+  var caps = ROLE_CAPS[normalizeRole_(role)];
+  return !!caps && caps[kind].indexOf(tab) !== -1;
+}
 
 function doGet(e) {
   var params = (e && e.parameter) || {};
@@ -63,6 +93,11 @@ function doGet(e) {
     }
     if (params.action === 'getPromos') {
       return json_({ ok: true, promos: getPromosJson_() });
+    }
+    if (params.action === 'listHousekeeping') {
+      var hk = requireCapability_(params.token, 'read', 'housekeeping');
+      if (!hk.ok) return json_(hk);
+      return json_({ ok: true, rooms: listHousekeepingRooms_(), log: listHousekeepingLog_() });
     }
     if (params.action === 'getBookings') {
       // Bookings carry guest PII, so gate them like room data rather than
@@ -115,6 +150,8 @@ function doPost(e) {
         return json_(pushPromo_(body));
       case 'deletePromo':
         return json_(deletePromo_(body));
+      case 'updateHousekeeping':
+        return json_(updateHousekeeping_(body));
       case 'logRoomStatus':
         return json_(logRoomStatus_(body));
       default:
@@ -134,6 +171,7 @@ function pushGuest_(body) {
   if (body.token) {
     var session = verifyToken_(body.token);
     if (!session) return { ok: false, error: 'Invalid or expired session' };
+    if (!hasCapability_(session.role, 'write', 'guests')) return { ok: false, error: 'Forbidden' };
   }
 
   var roomNo = String(body.roomNo || '').trim();
@@ -237,6 +275,7 @@ var ALLOWED_PROMO_MIME_TYPES = ['image/jpeg', 'image/png'];
 function pushPromo_(body) {
   var session = body.token ? verifyToken_(body.token) : null;
   if (body.token && !session) return { ok: false, error: 'Invalid or expired session' };
+  if (session && !hasCapability_(session.role, 'write', 'promos')) return { ok: false, error: 'Forbidden' };
 
   var mimeType = String(body.mimeType || '').toLowerCase();
   if (ALLOWED_PROMO_MIME_TYPES.indexOf(mimeType) === -1) {
@@ -286,6 +325,7 @@ function pushPromo_(body) {
 function deletePromo_(body) {
   var session = body.token ? verifyToken_(body.token) : null;
   if (body.token && !session) return { ok: false, error: 'Invalid or expired session' };
+  if (session && !hasCapability_(session.role, 'write', 'promos')) return { ok: false, error: 'Forbidden' };
 
   var id = String(body.id || '').trim();
   if (!id) return { ok: false, error: 'id is required' };
@@ -344,7 +384,7 @@ function login_(username, password) {
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim().toLowerCase() === username.toLowerCase()) {
       if (data[i][1] !== hash) return { ok: false, error: 'Invalid username or password' };
-      var role = data[i][2];
+      var role = normalizeRole_(data[i][2]);
       return { ok: true, username: data[i][0], role: role, token: makeToken_(data[i][0], role) };
     }
   }
@@ -360,7 +400,7 @@ function createUser_(body) {
   var role = body.role;
 
   if (!username || !password) return { ok: false, error: 'Username and password are required' };
-  if (role !== 'User' && role !== 'Admin') return { ok: false, error: 'Role must be User or Admin' };
+  if (ROLES.indexOf(role) === -1) return { ok: false, error: 'Role must be one of: ' + ROLES.join(', ') };
 
   var sheet = usersSheet_();
   var data = sheet.getDataRange().getValues();
@@ -379,19 +419,23 @@ function listUsers_() {
   var data = sheet.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < data.length; i++) {
-    out.push({ username: data[i][0], role: data[i][2], createdAt: data[i][3] });
+    out.push({ username: data[i][0], role: normalizeRole_(data[i][2]), createdAt: data[i][3] });
   }
   return out;
 }
 
 /**
- * Gate for ?room=... : a valid logged-in session, OR the shared device key
- * that ships baked into the TV app / Master app builds. Either is enough --
- * this isn't role-based, just "not a random caller on the public internet".
+ * Gate for ?room=... and ?action=getBookings : the shared device key that
+ * ships baked into the TV app / Master app builds (unauthenticated calls,
+ * not tied to a person), OR a valid logged-in session with 'guests' read
+ * access -- Housekeeping-only accounts don't get this data.
  */
 function isAuthorizedRoomRequest_(params) {
   if (params.key && params.key === DEVICE_KEY) return true;
-  if (params.token && verifyToken_(params.token)) return true;
+  if (params.token) {
+    var session = verifyToken_(params.token);
+    if (session && hasCapability_(session.role, 'read', 'guests')) return true;
+  }
   return false;
 }
 
@@ -407,7 +451,15 @@ function isAuthorizedDeviceRequest_(body) {
 function requireAdmin_(token) {
   var session = verifyToken_(token);
   if (!session) return { ok: false, error: 'Not authenticated' };
-  if (session.role !== 'Admin') return { ok: false, error: 'Forbidden' };
+  if (normalizeRole_(session.role) !== 'Admin') return { ok: false, error: 'Forbidden' };
+  return { ok: true, session: session };
+}
+
+/** Gate for an endpoint behind a role capability, e.g. requireCapability_(token, 'write', 'housekeeping'). */
+function requireCapability_(token, kind, tab) {
+  var session = verifyToken_(token);
+  if (!session) return { ok: false, error: 'Not authenticated' };
+  if (!hasCapability_(session.role, kind, tab)) return { ok: false, error: 'Forbidden' };
   return { ok: true, session: session };
 }
 
@@ -488,6 +540,70 @@ function paxOrNull_(value) {
   return isNaN(n) ? null : n;
 }
 
+/* ----- Housekeeping ----- */
+
+var HK_STATUSES = ['Vacant Ready', 'Vacant Dirty', 'Occupied', 'Maintenance', 'Out of Order'];
+var HK_LOG_LIMIT = 100;
+
+/**
+ * Append-only log, same pattern as Guests but never overwritten in place --
+ * the point of this tab is a history of who set what status when, for both
+ * room attendants and their supervisor. "Current" status per room is
+ * derived by scanning for each room's most recent row (see
+ * listHousekeepingRooms_), not stored separately.
+ */
+function housekeepingSheet_() {
+  return getOrCreateSheet_('Housekeeping', ['Timestamp', 'RoomNo', 'Status', 'UpdatedBy', 'Notes']);
+}
+
+function updateHousekeeping_(body) {
+  var access = requireCapability_(body.token, 'write', 'housekeeping');
+  if (!access.ok) return access;
+
+  var roomNo = String(body.roomNo || '').trim();
+  if (!roomNo) return { ok: false, error: 'roomNo is required' };
+
+  var status = String(body.status || '').trim();
+  if (HK_STATUSES.indexOf(status) === -1) return { ok: false, error: 'Status must be one of: ' + HK_STATUSES.join(', ') };
+
+  var notes = String(body.notes || '').trim();
+  housekeepingSheet_().appendRow([new Date().toISOString(), roomNo, status, access.session.username, notes]);
+  return { ok: true };
+}
+
+function listHousekeepingRooms_() {
+  var data = housekeepingSheet_().getDataRange().getValues();
+  var byRoom = {};
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var roomNo = String(row[1] || '').trim();
+    if (!roomNo) continue;
+    // Rows are appended in chronological order, so the last one seen per
+    // room is always its most recent status.
+    byRoom[roomNo] = { roomNo: roomNo, status: row[2], updatedBy: row[3], updatedAt: row[0] };
+  }
+  var rooms = Object.keys(byRoom).map(function (roomNo) { return byRoom[roomNo]; });
+  rooms.sort(function (a, b) {
+    var an = Number(a.roomNo), bn = Number(b.roomNo);
+    if (!isNaN(an) && !isNaN(bn)) return an - bn;
+    return a.roomNo < b.roomNo ? -1 : a.roomNo > b.roomNo ? 1 : 0;
+  });
+  return rooms;
+}
+
+/** Most recent entries first, for an activity feed alongside the current-status board. */
+function listHousekeepingLog_() {
+  var data = housekeepingSheet_().getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[1]) continue;
+    out.push({ timestamp: row[0], roomNo: row[1], status: row[2], updatedBy: row[3], notes: row[4] });
+  }
+  out.reverse();
+  return out.slice(0, HK_LOG_LIMIT);
+}
+
 function usersSheet_() {
   var sheet = getOrCreateSheet_('Users', ['Username', 'PasswordHash', 'Role', 'CreatedAt']);
   if (sheet.getLastRow() < 2) {
@@ -536,7 +652,7 @@ function verifyToken_(token) {
   if (bits.length !== 3) return null;
   var username = bits[0], role = bits[1], expiry = Number(bits[2]);
   if (!expiry || Date.now() > expiry) return null;
-  return { username: username, role: role };
+  return { username: username, role: normalizeRole_(role) };
 }
 
 /* ----- Response ----- */

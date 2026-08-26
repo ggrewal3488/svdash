@@ -6,6 +6,26 @@ var SESSION_KEY = "svMasterSession";
 var session = null;      // { token, username, role }
 var pendingPush = null;  // form data waiting on the overwrite confirmation
 
+// Mirrors ROLE_CAPS in master/backend/Code.gs. 'tabs' controls what's visible
+// in the nav; 'write' controls which of those tabs' forms are enabled --
+// BOH sees every tab but writes nowhere, Housekeeping only sees/writes HK.
+var ROLE_CAPS = {
+    "Admin":        { tabs: ["update", "inhouse", "content", "hk", "users"], write: ["update", "content", "hk", "users"] },
+    "Front Desk":   { tabs: ["update", "inhouse", "content"], write: ["update", "content"] },
+    "Housekeeping": { tabs: ["hk"], write: ["hk"] },
+    "BOH":          { tabs: ["update", "inhouse", "content", "hk", "users"], write: [] }
+};
+
+function canSeeTab(tab) {
+    var caps = ROLE_CAPS[session && session.role];
+    return !!caps && caps.tabs.indexOf(tab) !== -1;
+}
+
+function canWrite(tab) {
+    var caps = ROLE_CAPS[session && session.role];
+    return !!caps && caps.write.indexOf(tab) !== -1;
+}
+
 document.addEventListener("DOMContentLoaded", init);
 
 function init() {
@@ -96,11 +116,27 @@ function showDashboard() {
     document.getElementById("dashboard").classList.remove("hidden");
     document.getElementById("user-label").textContent = session.username + " · " + session.role;
 
-    var usersTab = document.querySelector('.tab-btn[data-tab="users"]');
-    if (session.role === "Admin") usersTab.classList.remove("hidden");
-    else usersTab.classList.add("hidden");
+    var firstVisible = null;
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+        var visible = canSeeTab(btn.dataset.tab);
+        btn.classList.toggle("hidden", !visible);
+        if (visible && !firstVisible) firstVisible = btn.dataset.tab;
+    });
 
-    loadInHouse();
+    applyWritePermissions();
+    switchTab(firstVisible || "update");
+}
+
+/** Hides/disables every write control on a tab this role can't write to (view-only access). */
+function applyWritePermissions() {
+    var updateForm = document.getElementById("update-form");
+    updateForm.classList.toggle("hidden", !canWrite("update"));
+
+    document.getElementById("promo-upload-form").classList.toggle("hidden", !canWrite("content"));
+
+    document.getElementById("hk-update-form").classList.toggle("hidden", !canWrite("hk"));
+
+    document.getElementById("add-user-form").classList.toggle("hidden", !canWrite("users"));
 }
 
 /* ----- Dashboard shell / tabs ----- */
@@ -122,6 +158,8 @@ function wireDashboard() {
     document.getElementById("add-user-form").addEventListener("submit", onAddUserSubmit);
     document.getElementById("refresh-promos").addEventListener("click", loadPromos);
     document.getElementById("promo-file-input").addEventListener("change", onPromoFileSelected);
+    document.getElementById("refresh-hk").addEventListener("click", loadHousekeeping);
+    document.getElementById("hk-update-form").addEventListener("submit", onHkUpdateSubmit);
 }
 
 function switchTab(name) {
@@ -134,6 +172,7 @@ function switchTab(name) {
     if (name === "inhouse") loadInHouse();
     if (name === "users") loadUsers();
     if (name === "content") loadPromos();
+    if (name === "hk") loadHousekeeping();
 }
 
 /* ----- Update tab ----- */
@@ -327,12 +366,13 @@ function renderPromoGrid(promos) {
     if (promos.length === 0) {
         grid.innerHTML = '<p class="muted">No promotional images yet — the card just shows the Drawing Room logo.</p>';
     } else {
+        var writable = canWrite("content");
         grid.innerHTML = promos.map(function (p) {
             return '<div class="promo-card">' +
                 '<img src="' + encodeURI(p.url) + '" alt="Promo">' +
                 '<div class="promo-card-footer">' +
                 '<span class="muted">#' + p.order + '</span>' +
-                '<button type="button" class="promo-delete-btn" data-id="' + escapeHtml(p.id) + '">Delete</button>' +
+                (writable ? '<button type="button" class="promo-delete-btn" data-id="' + escapeHtml(p.id) + '">Delete</button>' : '') +
                 '</div></div>';
         }).join("");
 
@@ -406,7 +446,7 @@ function onDeletePromo(id) {
 
 /* ----- Users tab (admin only) ----- */
 function loadUsers() {
-    if (!session || session.role !== "Admin") return;
+    if (!session || !canSeeTab("users")) return;
     var tbody = document.getElementById("users-tbody");
     tbody.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
 
@@ -451,6 +491,76 @@ function onAddUserSubmit(e) {
     }).catch(function () { setStatus(statusEl, "Network error — try again", "error"); });
 }
 
+/* ----- Housekeeping tab ----- */
+function loadHousekeeping() {
+    var roomsBody = document.getElementById("hk-rooms-tbody");
+    var logBody = document.getElementById("hk-log-tbody");
+    roomsBody.innerHTML = '<tr><td colspan="4" class="muted">Loading…</td></tr>';
+    logBody.innerHTML = "";
+
+    apiGet({ action: "listHousekeeping", token: session.token }).then(function (res) {
+        if (!res.ok) {
+            roomsBody.innerHTML = '<tr><td colspan="4" class="status error">' + escapeHtml(res.error || "Could not load housekeeping data") + "</td></tr>";
+            return;
+        }
+        renderHkRooms(res.rooms || []);
+        renderHkLog(res.log || []);
+    }).catch(function () {
+        roomsBody.innerHTML = '<tr><td colspan="4" class="status error">Network error</td></tr>';
+    });
+}
+
+function renderHkRooms(rooms) {
+    var tbody = document.getElementById("hk-rooms-tbody");
+    if (rooms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="muted">No rooms logged yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rooms.map(function (r) {
+        return "<tr><td>" + escapeHtml(r.roomNo) + "</td><td>" + escapeHtml(r.status) + "</td><td>" +
+            escapeHtml(r.updatedBy) + "</td><td>" + escapeHtml(formatDateTime(r.updatedAt)) + "</td></tr>";
+    }).join("");
+}
+
+function renderHkLog(entries) {
+    var tbody = document.getElementById("hk-log-tbody");
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted">No activity yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = entries.map(function (e) {
+        return "<tr><td>" + escapeHtml(e.roomNo) + "</td><td>" + escapeHtml(e.status) + "</td><td>" +
+            escapeHtml(e.updatedBy) + "</td><td>" + escapeHtml(e.notes || "") + "</td><td>" +
+            escapeHtml(formatDateTime(e.timestamp)) + "</td></tr>";
+    }).join("");
+}
+
+function onHkUpdateSubmit(e) {
+    e.preventDefault();
+    var statusEl = document.getElementById("hk-update-status");
+    var roomNo = document.getElementById("hk-roomNo").value.trim();
+    if (!roomNo) return;
+
+    var body = {
+        action: "updateHousekeeping",
+        token: session.token,
+        roomNo: roomNo,
+        status: document.getElementById("hk-status").value,
+        notes: document.getElementById("hk-notes").value.trim()
+    };
+
+    setStatus(statusEl, "Saving…", "");
+    apiPost(body).then(function (res) {
+        if (res.ok) {
+            setStatus(statusEl, "Room " + roomNo + " updated", "ok");
+            document.getElementById("hk-update-form").reset();
+            loadHousekeeping();
+        } else {
+            setStatus(statusEl, res.error || "Update failed", "error");
+        }
+    }).catch(function () { setStatus(statusEl, "Network error — try again", "error"); });
+}
+
 /* ----- Utils ----- */
 function initials(lastName) {
     var words = String(lastName || "").trim().split(/\s+/).filter(Boolean);
@@ -470,4 +580,10 @@ function formatDate(iso) {
     if (!iso) return "";
     var d = new Date(iso);
     return isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
+
+function formatDateTime(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
