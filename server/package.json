@@ -2,7 +2,7 @@
   "name": "master-api",
   "version": "0.1.0",
   "private": true,
-  "description": "Master Application API \u2014 reservations, guests, cards, and the TV bridge writer.",
+  "description": "Master Application API — reservations, guests, cards, and the TV bridge writer.",
   "type": "commonjs",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
@@ -14,13 +14,17 @@
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "googleapis": "^176.0.0",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.7.4",
     "prisma": "^5.20.0",

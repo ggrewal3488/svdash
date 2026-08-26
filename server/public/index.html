@@ -16,8 +16,9 @@
   <form id="login-form" class="card">
     <img src="logo.png" class="login-logo" alt="Stay Vista Residences">
     <h1>Front Desk</h1>
-    <p class="muted">Enter the API key to continue.</p>
-    <input type="password" id="api-key" placeholder="API key" autocomplete="current-password" required>
+    <p class="muted">Sign in to continue.</p>
+    <input type="text" id="login-username" placeholder="Username" autocomplete="username" required>
+    <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required>
     <button type="submit">Sign in</button>
     <p id="login-error" class="error hidden"></p>
   </form>
@@ -34,8 +35,11 @@
       <button data-tab="arrivals" class="tab active">Arrivals</button>
       <button data-tab="inhouse" class="tab">In house</button>
       <button data-tab="housekeeping" class="tab">Housekeeping</button>
+      <button data-tab="update-tv" class="tab">Update TV</button>
+      <button data-tab="users" class="tab hidden">Users</button>
     </nav>
     <div class="header-actions">
+      <span id="user-label" class="muted"></span>
       <button id="sync-btn" class="secondary">Sync sheet</button>
       <button id="signout" class="secondary">Sign out</button>
     </div>
@@ -57,6 +61,63 @@
     <h2>Rooms</h2>
     <div id="rooms-legend" class="legend"></div>
     <div id="rooms-grid" class="rooms"></div>
+  </section>
+
+  <section id="update-tv" class="panel hidden">
+    <h2>Push guest to TV</h2>
+    <p class="muted">Manual override — normal check-ins already do this automatically. Use this for a walk-in, a correction, or a message-only update.</p>
+    <form id="update-tv-form" class="form-grid">
+      <label>Room number
+        <input type="text" id="tv-room" inputmode="numeric" placeholder="e.g. 204" required>
+      </label>
+      <label>Salutation
+        <select id="tv-sal">
+          <option></option>
+          <option>Mr.</option>
+          <option>Ms.</option>
+          <option>Mr. &amp; Mrs.</option>
+          <option>Dr.</option>
+        </select>
+      </label>
+      <label>Last name
+        <input type="text" id="tv-name">
+      </label>
+      <label>Check-in
+        <input type="date" id="tv-checkin">
+      </label>
+      <label>Check-out
+        <input type="date" id="tv-checkout">
+      </label>
+      <label class="span-2">Message
+        <textarea id="tv-message" rows="2" placeholder="Shown on the TV welcome line"></textarea>
+      </label>
+      <button type="submit" id="tv-push-btn" class="span-2">Push to room</button>
+      <p id="tv-status" class="status span-2"></p>
+    </form>
+  </section>
+
+  <section id="users" class="panel hidden">
+    <h2>Users</h2>
+    <div id="users-list" class="list"></div>
+    <h3>Add user</h3>
+    <form id="add-user-form" class="form-grid">
+      <label>Username
+        <input type="text" id="nu-username" required>
+      </label>
+      <label>Password
+        <input type="password" id="nu-password" required minlength="8">
+      </label>
+      <label>Role
+        <select id="nu-role">
+          <option>FrontDesk</option>
+          <option>Housekeeping</option>
+          <option>BOH</option>
+          <option>Admin</option>
+        </select>
+      </label>
+      <button type="submit" class="span-2">Create user</button>
+      <p id="nu-status" class="status span-2"></p>
+    </form>
   </section>
 </div>
 

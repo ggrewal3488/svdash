@@ -1,29 +1,37 @@
 import "dotenv/config";
 import express from "express";
 import { join } from "path";
-import { requireApiKey } from "./auth";
+import { requireAuth, requireFrontDeskArea, requireRoomsArea } from "./auth";
 import { startSyncScheduler } from "./scheduler";
+import { authRouter } from "./routes/auth";
 import { reservationsRouter } from "./routes/reservations";
 import { roomsRouter } from "./routes/rooms";
 import { cardsRouter } from "./routes/cards";
 import { idDocumentsRouter } from "./routes/idDocuments";
+import { tvRouter } from "./routes/tv";
 
 const app = express();
 app.use(express.json());
 
 // Unauthenticated: a health probe carries nothing, and the front-desk page is
-// an empty shell until its JavaScript authenticates with a key of its own.
+// an empty shell until its JavaScript authenticates with a login of its own.
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/", express.static(join(__dirname, "..", "public")));
 
-// Lets the UI check a key before storing it, without exposing any data.
-app.post("/auth/verify", requireApiKey, (_req, res) => res.json({ ok: true }));
+// /auth/login is intentionally public (that's the point); /auth/verify and
+// the users endpoints gate themselves per-route in routes/auth.ts.
+app.use("/auth", authRouter);
 
 // Everything past here touches guest PII or moves guests between rooms.
-app.use("/reservations", requireApiKey, reservationsRouter);
-app.use("/rooms", requireApiKey, roomsRouter);
-app.use("/cards", requireApiKey, cardsRouter);
-app.use("/id-documents", requireApiKey, idDocumentsRouter);
+// requireFrontDeskArea/requireRoomsArea (see auth.ts) enforce the role
+// matrix: Admin and FrontDesk get full access to both areas; Housekeeping
+// only ever reaches /rooms, and only there can it write; BOH can GET
+// anything but POST nothing, anywhere.
+app.use("/reservations", requireAuth, requireFrontDeskArea, reservationsRouter);
+app.use("/rooms", requireAuth, requireRoomsArea, roomsRouter);
+app.use("/cards", requireAuth, requireFrontDeskArea, cardsRouter);
+app.use("/id-documents", requireAuth, requireFrontDeskArea, idDocumentsRouter);
+app.use("/tv", requireAuth, requireFrontDeskArea, tvRouter);
 
 const port = process.env.PORT ? Number(process.env.PORT) : 8080;
 app.listen(port, () => {

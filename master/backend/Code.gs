@@ -128,7 +128,20 @@ function doPost(e) {
   }
 
   try {
+    // action omitted entirely is the Master app's original, still-supported
+    // shape for a guest push ("POST { roomNo, ... }", no action field) — that
+    // one case falls through deliberately. Any other, unrecognized action
+    // string is a caller error, not silently treated as pushGuest_: an older
+    // deployment doesn't know a newer client's action names, and getting it
+    // wrong would mean overwriting a room's real guest data with whatever
+    // partial body that action sent, which is exactly what happened here
+    // once (see git log around 2026-08-25's RBAC/HK-log commit) before this
+    // check existed — undeployed logRoomStatus calls silently fell through
+    // to pushGuest_ and blanked a room's row.
     switch (body.action) {
+      case undefined:
+      case 'pushGuest':
+        return json_(pushGuest_(body));
       case 'login':
         return json_(login_(body.username, body.password));
       case 'createUser':
@@ -139,8 +152,10 @@ function doPost(e) {
         return json_(deletePromo_(body));
       case 'updateHousekeeping':
         return json_(updateHousekeeping_(body));
+      case 'logRoomStatus':
+        return json_(logRoomStatus_(body));
       default:
-        return json_(pushGuest_(body));
+        return json_({ ok: false, error: 'Unrecognized action: ' + body.action });
     }
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -226,6 +241,29 @@ function getRoomJson_(roomNo) {
     }
   }
   return { roomNo: roomNo };
+}
+
+/* ----- Housekeeping log ----- */
+
+// Every room status change from server/'s /rooms endpoints, any role that
+// can reach them (Admin, FrontDesk, Housekeeping) — an audit trail on the
+// same Hotel DB sheet everything else lives on, not just Housekeeping's own
+// actions, so Front Desk/Admin touching room status shows up here too.
+function logRoomStatus_(body) {
+  if (!isAuthorizedDeviceRequest_(body)) return { ok: false, error: 'Unauthorized' };
+
+  var roomNo = String(body.roomNo || '').trim();
+  if (!roomNo) return { ok: false, error: 'roomNo is required' };
+
+  hkLogSheet_().appendRow([
+    new Date().toISOString(),
+    roomNo,
+    body.previousStatus || '',
+    body.newStatus || '',
+    body.username || '',
+    body.role || ''
+  ]);
+  return { ok: true };
 }
 
 /* ----- Promos ----- */
@@ -401,6 +439,15 @@ function isAuthorizedRoomRequest_(params) {
   return false;
 }
 
+// Same gate as isAuthorizedRoomRequest_, but for a POST body (server-to-server
+// calls, like the Master API's HK status log, send the device key in the
+// JSON body rather than a query param).
+function isAuthorizedDeviceRequest_(body) {
+  if (body.key && body.key === DEVICE_KEY) return true;
+  if (body.token && verifyToken_(body.token)) return true;
+  return false;
+}
+
 function requireAdmin_(token) {
   var session = verifyToken_(token);
   if (!session) return { ok: false, error: 'Not authenticated' };
@@ -430,6 +477,10 @@ function getOrCreateSheet_(name, headers) {
 
 function guestsSheet_() {
   return getOrCreateSheet_('Guests', ['RoomNo', 'Salutation', 'LastName', 'Checkin', 'Checkout', 'Message', 'UpdatedAt']);
+}
+
+function hkLogSheet_() {
+  return getOrCreateSheet_('HK Log', ['Timestamp', 'RoomNo', 'PreviousStatus', 'NewStatus', 'Username', 'Role']);
 }
 
 function bookingsSheet_() {
