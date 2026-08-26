@@ -79,7 +79,8 @@ ROOMS="\
 407 192.168.10.50
 408 192.168.10.49
 409 192.168.10.51
-1001 192.168.10.55"
+1001 192.168.10.55
+1002 192.168.10.60"
 
 [ -x "$ADB" ] || { echo "adb not found/executable at: $ADB"; exit 1; }
 [ -f "$APK" ] || { echo "APK not found: $APK  (build it first)"; exit 1; }

@@ -48,12 +48,15 @@ object ProvisioningManager {
         "192.168.10.47" to "404", // MAC E0-22-A1-3C-97-48
         "192.168.10.48" to "405", // MAC not on file
         "192.168.10.54" to "406", // MAC 18-84-C1-31-77-46
-        "192.168.10.50" to "407", // MAC not on file
+        "192.168.10.50" to "407", // MAC 38-06-E6-8D-70-82
         "192.168.10.49" to "408", // MAC E0-22-A1-3C-5D-8E
         "192.168.10.51" to "409", // MAC C0-8A-60-E0-93-B5
 
-        "192.168.10.55" to "1001" // MAC C0-8A-60-DF-7D-49
+        "192.168.10.55" to "1001", // MAC C0-8A-60-DF-7D-49
+        "192.168.10.60" to "1002" // MAC D0-76-02-A1-EA-4D
     )
+    // Server Room (192.168.10.128, MAC 60-DC-81-A6-27-ED) is infrastructure,
+    // not a guest-room TV -- intentionally not in this map.
 
     /**
      * Attempts to find a matching room number based on the device's local IP.
