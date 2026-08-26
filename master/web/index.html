@@ -37,10 +37,11 @@
             <h1>Master Dashboard</h1>
         </div>
         <nav id="tabs">
-            <button class="tab-btn active" data-tab="update">Update</button>
-            <button class="tab-btn" data-tab="inhouse">In-House</button>
-            <button class="tab-btn" data-tab="content">Content</button>
-            <button class="tab-btn admin-only hidden" data-tab="users">Users</button>
+            <button class="tab-btn hidden" data-tab="update">Update</button>
+            <button class="tab-btn hidden" data-tab="inhouse">In-House</button>
+            <button class="tab-btn hidden" data-tab="content">Content</button>
+            <button class="tab-btn hidden" data-tab="hk">Housekeeping</button>
+            <button class="tab-btn hidden" data-tab="users">Users</button>
         </nav>
         <div id="user-info">
             <span id="user-label"></span>
@@ -114,6 +115,45 @@
             </form>
         </section>
 
+        <section id="tab-hk" class="tab-panel hidden">
+            <div class="panel-head">
+                <h2>Housekeeping</h2>
+                <button id="refresh-hk">Refresh</button>
+            </div>
+
+            <form id="hk-update-form">
+                <label>Room Number
+                    <input type="text" id="hk-roomNo" inputmode="numeric" placeholder="e.g. 204" required>
+                </label>
+                <label>Status
+                    <select id="hk-status">
+                        <option>Vacant Ready</option>
+                        <option>Vacant Dirty</option>
+                        <option>Occupied</option>
+                        <option>Maintenance</option>
+                        <option>Out of Order</option>
+                    </select>
+                </label>
+                <label>Notes
+                    <input type="text" id="hk-notes" placeholder="Optional">
+                </label>
+                <button type="submit" id="hk-update-btn">Update Status</button>
+                <div class="status" id="hk-update-status"></div>
+            </form>
+
+            <h3>Room Status</h3>
+            <table id="hk-rooms-table">
+                <thead><tr><th>Room</th><th>Status</th><th>Updated By</th><th>Updated At</th></tr></thead>
+                <tbody id="hk-rooms-tbody"></tbody>
+            </table>
+
+            <h3>Recent Activity</h3>
+            <table id="hk-log-table">
+                <thead><tr><th>Room</th><th>Status</th><th>By</th><th>Notes</th><th>When</th></tr></thead>
+                <tbody id="hk-log-tbody"></tbody>
+            </table>
+        </section>
+
         <section id="tab-users" class="tab-panel hidden">
             <div class="panel-head">
                 <h2>Users</h2>
@@ -134,8 +174,10 @@
                 </label>
                 <label>Role
                     <select id="nu-role">
-                        <option>User</option>
                         <option>Admin</option>
+                        <option>Front Desk</option>
+                        <option>Housekeeping</option>
+                        <option>BOH</option>
                     </select>
                 </label>
                 <button type="submit">Create User</button>
