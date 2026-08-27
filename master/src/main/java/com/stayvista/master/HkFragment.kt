@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -178,9 +179,24 @@ class HkFragment : Fragment() {
             holder.tvTag.text = r.roomNo
             holder.tvStatus.text = r.status
             holder.tvMeta.text = "Updated by ${r.updatedBy}"
+
+            val ctx = holder.itemView.context
+            val (bgRes, colorRes) = statusColors(r.status)
+            holder.tvTag.setBackgroundResource(bgRes)
+            holder.tvTag.setTextColor(ContextCompat.getColor(ctx, colorRes))
         }
 
         override fun getItemCount() = rooms.size
+
+        // Mirrors the housekeeping grid's status coding in server/public/style.css
+        // (.room.vacant_ready/.vacant_dirty/.occupied/.maintenance,.out_of_order).
+        private fun statusColors(status: String): Pair<Int, Int> = when (status) {
+            "Vacant Ready" -> R.drawable.bg_chip_ready to R.color.ok
+            "Vacant Dirty" -> R.drawable.bg_chip_dirty to R.color.gold_light
+            "Occupied" -> R.drawable.bg_chip_occupied to R.color.occupied
+            "Maintenance", "Out of Order" -> R.drawable.bg_chip_danger to R.color.danger
+            else -> R.drawable.bg_chip to R.color.gold_light
+        }
     }
 
     class HkLogAdapter(private val entries: List<HkLogEntry>) : RecyclerView.Adapter<HkLogAdapter.ViewHolder>() {

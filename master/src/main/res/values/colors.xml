@@ -15,8 +15,11 @@
     <color name="ink">#EDEDED</color>
     <color name="muted">#A8A29A</color>
     <color name="danger">#E4695B</color>
+    <color name="danger_soft">#1EE4695B</color>
     <color name="ok">#7FBF7F</color>
+    <color name="ok_soft">#1E7FBF7F</color>
     <color name="occupied">#8CA9C9</color>
+    <color name="occupied_soft">#1E8CA9C9</color>
     <color name="input_bg">#4D000000</color>
     <color name="button_ink">#1A1400</color>
 </resources>
