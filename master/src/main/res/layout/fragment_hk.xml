@@ -3,14 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FAF7F2"
+    android:background="@color/bg"
     android:padding="16dp">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Housekeeping"
-        android:textColor="#C9A257"
+        android:textColor="@color/gold_light"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="12dp" />
@@ -20,8 +20,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@android:color/white"
-        android:padding="12dp"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
         android:layout_marginBottom="12dp">
 
         <EditText
@@ -29,12 +29,18 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Room number, e.g. 204"
-            android:inputType="number" />
+            android:inputType="number"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp" />
 
         <Spinner
             android:id="@+id/spHkStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_input"
+            android:padding="12dp"
             android:layout_marginTop="8dp" />
 
         <EditText
@@ -42,6 +48,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Notes (optional)"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp"
             android:layout_marginTop="8dp" />
 
         <Button
@@ -49,8 +59,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="UPDATE STATUS"
-            android:backgroundTint="#C9A257"
-            android:textColor="@android:color/white"
+            android:background="@drawable/bg_button_gradient"
+            android:textColor="@color/button_ink"
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
@@ -65,21 +75,27 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="ROOM STATUS" />
+            android:layout_marginEnd="4dp"
+            android:background="@android:color/transparent"
+            android:text="ROOM STATUS"
+            android:textColor="@color/ink" />
 
         <Button
             android:id="@+id/btnHkShowLog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="RECENT ACTIVITY" />
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
+            android:text="RECENT ACTIVITY"
+            android:textColor="@color/ink" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/tvHkStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#999999"
+        android:textColor="@color/muted"
         android:textSize="12sp"
         android:paddingBottom="4dp" />
 

@@ -5,18 +5,18 @@
     android:orientation="horizontal"
     android:padding="16dp"
     android:gravity="center_vertical"
-    android:background="@android:color/white"
+    android:background="@drawable/bg_card"
     android:layout_marginBottom="8dp">
 
     <TextView
         android:id="@+id/tvHkRoomTag"
         android:layout_width="45dp"
         android:layout_height="wrap_content"
-        android:background="#C9A257"
+        android:background="@drawable/bg_chip"
         android:padding="6dp"
         android:text="408"
         android:textAlignment="center"
-        android:textColor="@android:color/white"
+        android:textColor="@color/gold_light"
         android:textStyle="bold"
         android:layout_marginEnd="16dp" />
 
@@ -31,7 +31,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Vacant Ready"
-            android:textColor="#333333"
+            android:textColor="@color/ink"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -40,7 +40,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Updated by ggrewal"
-            android:textColor="#999999"
+            android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>
 

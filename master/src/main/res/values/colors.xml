@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mirrors the tokens in server/public/style.css and master/web/style.css so
+     the native app, the front-desk PMS, and the Master web dashboard read as
+     one product. Keep these three in sync if the palette changes. -->
+<resources>
+    <color name="gold">#C9A257</color>
+    <color name="gold_light">#E4BE6E</color>
+    <color name="gold_soft">#24C9A257</color>
+    <color name="bg">#0D0D0D</color>
+    <color name="panel">#99171614</color>
+    <color name="panel_solid">#1A1917</color>
+    <color name="panel_raised">#211F1B</color>
+    <color name="border">#1FFFFFFF</color>
+    <color name="border_soft">#12FFFFFF</color>
+    <color name="ink">#EDEDED</color>
+    <color name="muted">#A8A29A</color>
+    <color name="danger">#E4695B</color>
+    <color name="ok">#7FBF7F</color>
+    <color name="occupied">#8CA9C9</color>
+    <color name="input_bg">#4D000000</color>
+    <color name="button_ink">#1A1400</color>
+</resources>

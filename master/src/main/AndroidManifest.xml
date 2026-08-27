@@ -9,7 +9,7 @@
         android:label="StayVista Master"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+        android:theme="@style/Theme.Master">
         <activity
             android:name=".LoginActivity"
             android:exported="true">

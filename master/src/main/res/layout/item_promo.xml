@@ -5,7 +5,7 @@
     android:orientation="horizontal"
     android:padding="12dp"
     android:gravity="center_vertical"
-    android:background="@android:color/white"
+    android:background="@drawable/bg_card"
     android:layout_marginBottom="8dp">
 
     <ImageView
@@ -13,7 +13,7 @@
         android:layout_width="72dp"
         android:layout_height="48dp"
         android:scaleType="centerCrop"
-        android:background="#EEEEEE"
+        android:background="@drawable/bg_thumb_placeholder"
         android:layout_marginEnd="16dp" />
 
     <TextView
@@ -21,7 +21,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textColor="#333333"
+        android:textColor="@color/ink"
         android:textSize="14sp"
         android:text="Promo #1" />
 
@@ -30,7 +30,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Delete"
-        android:textColor="#E4695B"
+        android:textColor="@color/danger"
         style="@style/Widget.AppCompat.Button.Borderless" />
 
 </LinearLayout>

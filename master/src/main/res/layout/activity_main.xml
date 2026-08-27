@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FAF7F2">
+    android:background="@color/bg">
 
     <LinearLayout
         android:id="@+id/topBar"
@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#FFFFFF"
+        android:background="@color/panel_solid"
         android:paddingStart="16dp"
         android:paddingEnd="8dp"
         android:paddingTop="8dp"
@@ -23,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#888888"
+            android:textColor="@color/muted"
             android:textSize="12sp" />
 
         <Button
@@ -31,18 +31,21 @@
             style="?android:attr/buttonStyleSmall"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="LOG OUT" />
+            android:background="@android:color/transparent"
+            android:text="LOG OUT"
+            android:textColor="@color/ink" />
     </LinearLayout>
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#FFFFFF"
+        android:background="@color/panel_solid"
         app:layout_constraintTop_toBottomOf="@id/topBar"
-        app:tabIndicatorColor="#C9A257"
-        app:tabSelectedTextColor="#C9A257"
-        app:tabTextColor="#888888"
+        app:tabIndicatorColor="@color/gold"
+        app:tabIndicatorHeight="2dp"
+        app:tabSelectedTextColor="@color/gold_light"
+        app:tabTextColor="@color/muted"
         app:tabMode="scrollable" />
 
     <FrameLayout

@@ -3,14 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FAF7F2"
+    android:background="@color/bg"
     android:padding="16dp">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Users"
-        android:textColor="#C9A257"
+        android:textColor="@color/gold_light"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="12dp" />
@@ -20,15 +20,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@android:color/white"
-        android:padding="12dp"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
         android:layout_marginBottom="12dp">
 
         <EditText
             android:id="@+id/etNewUsername"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Username" />
+            android:hint="Username"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp" />
 
         <EditText
             android:id="@+id/etNewPassword"
@@ -36,12 +40,18 @@
             android:layout_height="wrap_content"
             android:hint="Password"
             android:inputType="textPassword"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp"
             android:layout_marginTop="8dp" />
 
         <Spinner
             android:id="@+id/spNewRole"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_input"
+            android:padding="12dp"
             android:layout_marginTop="8dp" />
 
         <Button
@@ -49,8 +59,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="CREATE USER"
-            android:backgroundTint="#C9A257"
-            android:textColor="@android:color/white"
+            android:background="@drawable/bg_button_gradient"
+            android:textColor="@color/button_ink"
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
@@ -58,7 +68,7 @@
         android:id="@+id/tvUsersStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#999999"
+        android:textColor="@color/muted"
         android:textSize="12sp"
         android:paddingBottom="4dp" />
 
