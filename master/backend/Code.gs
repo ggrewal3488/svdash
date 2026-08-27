@@ -29,19 +29,24 @@
  *   GET  ?action=listUsers&token=...       -> admin only
  *   GET  ?action=getPromos                 -> active promo images (id, url, hash, order), unauthenticated
  *   GET  ?action=listHousekeeping&token=... -> current status per room + recent log entries
+ *   GET  ?action=listMaintenance&token=...  -> current status per ticket + recent log entries
  *   POST { action: 'login', ... }
  *   POST { action: 'createUser', ... }     -> admin only
  *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
  *   POST { action: 'deletePromo', id, token? } -> remove a promo image
  *   POST { action: 'updateHousekeeping', roomNo, status, notes?, token } -> Admin/Housekeeping only, appends to the log
+ *   POST { action: 'createMaintenanceTicket', location, issue, token } -> any role, opens a ticket
+ *   POST { action: 'updateMaintenanceTicket', ticketId, status, notes?, token } -> any role, advances a ticket
  *   POST { roomNo, ... }                   -> push/overwrite a room's guest (action omitted or 'pushGuest')
  *   GET  ?action=getBookings&(token=...|key=...) -> the Bookings tab, for the Master API's reservation sync
  *
  * Roles: Admin (everything, only role that can create users), Front Desk
  * (guest push, in-house, content -- the old 'User' role, still accepted on
  * login/tokens for accounts created before this rename), Housekeeping (HK
- * tab only), BOH (read-only across every tab). See ROLE_CAPS below for the
- * exact capability grants.
+ * tab only), BOH (read-only except Maintenance). Maintenance itself is the
+ * one tab every role can both see and write to -- anyone on staff can raise
+ * or update a ticket for a room or any other area of the property. See
+ * ROLE_CAPS below for the exact capability grants.
  */
 
 var SECRET = 'CHANGE-ME-BEFORE-DEPLOYING-A-LONG-RANDOM-STRING';
@@ -60,13 +65,16 @@ var ROLES = ['Admin', 'Front Desk', 'Housekeeping', 'BOH'];
 // Capability grants per role. 'guests' = Update/In-House tabs (push +
 // read), 'promos' = Content tab uploads (reading the promo grid is public,
 // unauthenticated -- see getPromosJson_), 'housekeeping' = the HK tab,
-// 'users' = the Users tab. Every role gets *:read implicitly through
-// hasCapability_ below; only the roles listed here get *:write.
+// 'users' = the Users tab, 'maintenance' = the Maintenance tab. Every role
+// gets *:read implicitly through hasCapability_ below; only the roles
+// listed here get *:write. 'maintenance' is intentionally on every role's
+// write list -- anyone on staff can raise or update a ticket. Keep in sync
+// with ROLE_CAPS in Session.kt.
 var ROLE_CAPS = {
-  'Admin':         { read: ['guests', 'promos', 'housekeeping', 'users'], write: ['guests', 'promos', 'housekeeping', 'users'] },
-  'Front Desk':    { read: ['guests', 'promos'],                          write: ['guests', 'promos'] },
-  'Housekeeping':  { read: ['housekeeping'],                              write: ['housekeeping'] },
-  'BOH':           { read: ['guests', 'promos', 'housekeeping', 'users'], write: [] }
+  'Admin':         { read: ['guests', 'promos', 'housekeeping', 'users', 'maintenance'], write: ['guests', 'promos', 'housekeeping', 'users', 'maintenance'] },
+  'Front Desk':    { read: ['guests', 'promos', 'maintenance'],                          write: ['guests', 'promos', 'maintenance'] },
+  'Housekeeping':  { read: ['housekeeping', 'maintenance'],                              write: ['housekeeping', 'maintenance'] },
+  'BOH':           { read: ['guests', 'promos', 'housekeeping', 'users', 'maintenance'], write: ['maintenance'] }
 };
 
 /** Accounts created before the Front Desk rename still have role 'User' in the sheet. */
@@ -98,6 +106,11 @@ function doGet(e) {
       var hk = requireCapability_(params.token, 'read', 'housekeeping');
       if (!hk.ok) return json_(hk);
       return json_({ ok: true, rooms: listHousekeepingRooms_(), log: listHousekeepingLog_() });
+    }
+    if (params.action === 'listMaintenance') {
+      var mnt = requireCapability_(params.token, 'read', 'maintenance');
+      if (!mnt.ok) return json_(mnt);
+      return json_({ ok: true, tickets: listMaintenanceTickets_(), log: listMaintenanceLog_() });
     }
     if (params.action === 'getBookings') {
       // Bookings carry guest PII, so gate them like room data rather than
@@ -154,6 +167,10 @@ function doPost(e) {
         return json_(updateHousekeeping_(body));
       case 'logRoomStatus':
         return json_(logRoomStatus_(body));
+      case 'createMaintenanceTicket':
+        return json_(createMaintenanceTicket_(body));
+      case 'updateMaintenanceTicket':
+        return json_(updateMaintenanceTicket_(body));
       default:
         return json_({ ok: false, error: 'Unrecognized action: ' + body.action });
     }
@@ -602,6 +619,97 @@ function listHousekeepingLog_() {
   }
   out.reverse();
   return out.slice(0, HK_LOG_LIMIT);
+}
+
+/* ----- Maintenance tickets ----- */
+
+var MAINTENANCE_STATUSES = ['Open', 'In Progress', 'Resolved'];
+var MAINTENANCE_LOG_LIMIT = 100;
+
+/**
+ * Append-only, same pattern as the Housekeeping sheet: every create/update
+ * is a new row keyed by TicketId, and "current" status per ticket is the
+ * most recent row seen for that id (see listMaintenanceTickets_). Location
+ * is free text -- a room number or any other area of the property -- not
+ * validated against the room list, since a ticket can be raised for
+ * anywhere (lobby, pool, server room, ...).
+ */
+function maintenanceSheet_() {
+  return getOrCreateSheet_('Maintenance', ['Timestamp', 'TicketId', 'Location', 'Issue', 'Status', 'UpdatedBy', 'Role', 'Notes']);
+}
+
+function createMaintenanceTicket_(body) {
+  var access = requireCapability_(body.token, 'write', 'maintenance');
+  if (!access.ok) return access;
+
+  var location = String(body.location || '').trim();
+  if (!location) return { ok: false, error: 'Location is required' };
+
+  var issue = String(body.issue || '').trim();
+  if (!issue) return { ok: false, error: 'Issue description is required' };
+
+  var ticketId = 'MT-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+  maintenanceSheet_().appendRow([new Date().toISOString(), ticketId, location, issue, 'Open', access.session.username, access.session.role, '']);
+  return { ok: true, ticketId: ticketId };
+}
+
+/** status advances a ticket; location/issue always carry forward from the ticket's first row. */
+function updateMaintenanceTicket_(body) {
+  var access = requireCapability_(body.token, 'write', 'maintenance');
+  if (!access.ok) return access;
+
+  var ticketId = String(body.ticketId || '').trim();
+  if (!ticketId) return { ok: false, error: 'ticketId is required' };
+
+  var status = String(body.status || '').trim();
+  if (MAINTENANCE_STATUSES.indexOf(status) === -1) return { ok: false, error: 'Status must be one of: ' + MAINTENANCE_STATUSES.join(', ') };
+
+  var data = maintenanceSheet_().getDataRange().getValues();
+  var location = '', issue = '';
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() === ticketId) { location = data[i][2]; issue = data[i][3]; }
+  }
+  if (!location) return { ok: false, error: 'Ticket not found' };
+
+  var notes = String(body.notes || '').trim();
+  maintenanceSheet_().appendRow([new Date().toISOString(), ticketId, location, issue, status, access.session.username, access.session.role, notes]);
+  return { ok: true };
+}
+
+function listMaintenanceTickets_() {
+  var data = maintenanceSheet_().getDataRange().getValues();
+  var byTicket = {};
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var ticketId = String(row[1] || '').trim();
+    if (!ticketId) continue;
+    // Rows are appended in chronological order, so the last one seen per
+    // ticket is always its most recent state.
+    byTicket[ticketId] = {
+      ticketId: ticketId,
+      location: row[2],
+      issue: row[3],
+      status: row[4],
+      updatedBy: row[5],
+      updatedAt: row[0]
+    };
+  }
+  var tickets = Object.keys(byTicket).map(function (id) { return byTicket[id]; });
+  tickets.sort(function (a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+  return tickets;
+}
+
+/** Most recent entries first, for an activity feed alongside the open-tickets board. */
+function listMaintenanceLog_() {
+  var data = maintenanceSheet_().getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (!row[1]) continue;
+    out.push({ timestamp: row[0], ticketId: row[1], location: row[2], issue: row[3], status: row[4], updatedBy: row[5], notes: row[7] });
+  }
+  out.reverse();
+  return out.slice(0, MAINTENANCE_LOG_LIMIT);
 }
 
 function usersSheet_() {

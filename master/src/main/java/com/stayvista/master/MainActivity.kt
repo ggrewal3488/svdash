@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
         Session.TAB_CONTENT -> "CONTENT"
         Session.TAB_HK -> "HOUSEKEEPING"
         Session.TAB_USERS -> "USERS"
+        Session.TAB_MAINTENANCE -> "MAINTENANCE"
         else -> tab.uppercase()
     }
 
@@ -69,6 +70,7 @@ class MainActivity : AppCompatActivity() {
         Session.TAB_CONTENT -> ContentFragment()
         Session.TAB_HK -> HkFragment()
         Session.TAB_USERS -> UsersFragment()
+        Session.TAB_MAINTENANCE -> MaintenanceFragment()
         else -> UpdateFragment()
     }
 

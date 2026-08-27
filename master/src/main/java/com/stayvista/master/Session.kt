@@ -18,25 +18,29 @@ object Session {
     const val TAB_CONTENT = "content"
     const val TAB_HK = "hk"
     const val TAB_USERS = "users"
+    const val TAB_MAINTENANCE = "maintenance"
 
     private data class RoleCaps(val tabs: List<String>, val write: List<String>)
 
+    // Maintenance is deliberately open to every role in both tabs and write --
+    // anyone on staff can raise or update a ticket, unlike every other tab
+    // here. Keep this in sync with ROLE_CAPS in master/backend/Code.gs.
     private val ROLE_CAPS = mapOf(
         "Admin" to RoleCaps(
-            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT, TAB_HK, TAB_USERS),
-            write = listOf(TAB_UPDATE, TAB_CONTENT, TAB_HK, TAB_USERS)
+            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT, TAB_HK, TAB_USERS, TAB_MAINTENANCE),
+            write = listOf(TAB_UPDATE, TAB_CONTENT, TAB_HK, TAB_USERS, TAB_MAINTENANCE)
         ),
         "Front Desk" to RoleCaps(
-            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT),
-            write = listOf(TAB_UPDATE, TAB_CONTENT)
+            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT, TAB_MAINTENANCE),
+            write = listOf(TAB_UPDATE, TAB_CONTENT, TAB_MAINTENANCE)
         ),
         "Housekeeping" to RoleCaps(
-            tabs = listOf(TAB_HK),
-            write = listOf(TAB_HK)
+            tabs = listOf(TAB_HK, TAB_MAINTENANCE),
+            write = listOf(TAB_HK, TAB_MAINTENANCE)
         ),
         "BOH" to RoleCaps(
-            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT, TAB_HK, TAB_USERS),
-            write = emptyList()
+            tabs = listOf(TAB_UPDATE, TAB_INHOUSE, TAB_CONTENT, TAB_HK, TAB_USERS, TAB_MAINTENANCE),
+            write = listOf(TAB_MAINTENANCE)
         )
     )
 

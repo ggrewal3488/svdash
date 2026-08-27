@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Maintenance"
+        android:textColor="@color/gold_light"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp" />
+
+    <LinearLayout
+        android:id="@+id/maintRaiseGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/etMaintLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Room number or area, e.g. 204 or Lobby"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp" />
+
+        <EditText
+            android:id="@+id/etMaintIssue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Describe the issue"
+            android:background="@drawable/bg_input"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/muted"
+            android:padding="12dp"
+            android:gravity="top"
+            android:lines="3"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/btnMaintRaise"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RAISE TICKET"
+            android:background="@drawable/bg_button_gradient"
+            android:textColor="@color/button_ink"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <Button
+            android:id="@+id/btnMaintShowOpen"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:background="@android:color/transparent"
+            android:text="OPEN TICKETS"
+            android:textColor="@color/ink" />
+
+        <Button
+            android:id="@+id/btnMaintShowLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:background="@android:color/transparent"
+            android:text="RECENT ACTIVITY"
+            android:textColor="@color/ink" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvMaintStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/muted"
+        android:textSize="12sp"
+        android:paddingBottom="4dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMaint"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>
