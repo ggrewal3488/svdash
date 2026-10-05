@@ -2,6 +2,7 @@ package com.stayvista.master
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -116,12 +117,8 @@ class UpdateFragment : Fragment() {
                 // 12-hour expiry, which sends the user back to log in. Show
                 // any other reason instead of falling through to the generic
                 // "did not save" from the read-back.
-                val error = try {
-                    val json = JSONObject(respBody)
-                    if (json.optBoolean("ok", true)) null else json.optString("error", "unknown error")
-                } catch (e: Exception) {
-                    null
-                }
+                val reply = try { JSONObject(respBody) } catch (e: Exception) { null }
+                val error = if (reply == null || reply.optBoolean("ok", true)) null else reply.optString("error", "unknown error")
                 if (error != null) {
                     if (error.contains("session", ignoreCase = true)) {
                         activity?.runOnUiThread { (activity as? MainActivity)?.onSessionExpired() }
@@ -130,7 +127,15 @@ class UpdateFragment : Fragment() {
                     }
                     return
                 }
-                verifySaved(client, roomNo, lastName, onDone)
+                // pushGuest_ echoes { ok: true, roomNo } once the row is
+                // written, which is proof enough. The read-back is only for a
+                // reply that isn't that -- Google sometimes serves an HTML
+                // page in place of the script's JSON.
+                if (reply != null && reply.optBoolean("ok", false) && reply.optString("roomNo") == roomNo) {
+                    report("Room $roomNo saved — TV refreshes within a minute", onDone)
+                } else {
+                    verifySaved(client, roomNo, lastName, onDone)
+                }
             }
         })
     }
@@ -151,6 +156,7 @@ class UpdateFragment : Fragment() {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                Log.w("UpdateFragment", "read-back failed for room $roomNo", e)
                 report("Saved, but could not verify: ${e.message}", onDone)
             }
 
@@ -158,8 +164,14 @@ class UpdateFragment : Fragment() {
                 val body = response.use { it.body?.string() } ?: ""
                 // A refused read-back says nothing about whether the push
                 // landed -- don't report it as a failed save.
+                Log.w("UpdateFragment", "read-back for room $roomNo (token sent: ${Session.token != null}): ${body.take(200)}")
                 if (body.contains("Unauthorized")) {
                     report("Room $roomNo pushed, but the read-back was refused — device key mismatch", onDone)
+                    return
+                }
+                // Same for a reply that isn't the script's JSON at all.
+                if (!body.trimStart().startsWith("{")) {
+                    report("Room $roomNo pushed, but could not verify — check the TV", onDone)
                     return
                 }
                 val saved = lastName.isEmpty() || body.contains(lastName, ignoreCase = true)

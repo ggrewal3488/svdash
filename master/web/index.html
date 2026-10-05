@@ -41,6 +41,7 @@
             <button class="tab-btn hidden" data-tab="inhouse">In-House</button>
             <button class="tab-btn hidden" data-tab="content">Content</button>
             <button class="tab-btn hidden" data-tab="hk">Housekeeping</button>
+            <button class="tab-btn hidden" data-tab="maintenance">Maintenance</button>
             <button class="tab-btn hidden" data-tab="users">Users</button>
         </nav>
         <div id="user-info">
@@ -154,13 +155,43 @@
             </table>
         </section>
 
+        <section id="tab-maintenance" class="tab-panel hidden">
+            <div class="panel-head">
+                <h2>Maintenance</h2>
+                <button id="refresh-maint">Refresh</button>
+            </div>
+
+            <form id="maint-raise-form">
+                <label>Room or Area
+                    <input type="text" id="maint-location" placeholder="e.g. 204 or Lobby" required>
+                </label>
+                <label>Issue
+                    <input type="text" id="maint-issue" placeholder="Describe the issue" required>
+                </label>
+                <button type="submit">Raise Ticket</button>
+                <div class="status" id="maint-status"></div>
+            </form>
+
+            <h3>Tickets</h3>
+            <table id="maint-tickets-table">
+                <thead><tr><th>Location</th><th>Issue</th><th>Status</th><th>Updated By</th><th>Updated At</th><th></th></tr></thead>
+                <tbody id="maint-tickets-tbody"></tbody>
+            </table>
+
+            <h3>Recent Activity</h3>
+            <table id="maint-log-table">
+                <thead><tr><th>Location</th><th>Issue</th><th>Status</th><th>By</th><th>When</th></tr></thead>
+                <tbody id="maint-log-tbody"></tbody>
+            </table>
+        </section>
+
         <section id="tab-users" class="tab-panel hidden">
             <div class="panel-head">
                 <h2>Users</h2>
                 <button id="refresh-users">Refresh</button>
             </div>
             <table id="users-table">
-                <thead><tr><th>Username</th><th>Role</th><th>Created</th></tr></thead>
+                <thead><tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead>
                 <tbody id="users-tbody"></tbody>
             </table>
 
@@ -200,6 +231,29 @@
             <button type="button" id="overwrite-confirm" disabled>Confirm &amp; Push</button>
         </div>
     </div>
+</div>
+
+<div id="edit-user-modal" class="modal hidden">
+    <form class="modal-box" id="edit-user-form">
+        <h3>Edit User</h3>
+        <p id="edit-user-name"></p>
+        <label>Role
+            <select id="eu-role">
+                <option>Admin</option>
+                <option>Front Desk</option>
+                <option>Housekeeping</option>
+                <option>BOH</option>
+            </select>
+        </label>
+        <label>New Password
+            <input type="password" id="eu-password" minlength="6" autocomplete="new-password" placeholder="Leave blank to keep current">
+        </label>
+        <div class="status" id="edit-user-status"></div>
+        <div class="modal-actions">
+            <button type="button" id="edit-user-cancel" class="secondary">Cancel</button>
+            <button type="submit" id="edit-user-save">Save</button>
+        </div>
+    </form>
 </div>
 
 <script src="app.js"></script>

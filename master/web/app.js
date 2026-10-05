@@ -8,12 +8,13 @@ var pendingPush = null;  // form data waiting on the overwrite confirmation
 
 // Mirrors ROLE_CAPS in master/backend/Code.gs. 'tabs' controls what's visible
 // in the nav; 'write' controls which of those tabs' forms are enabled --
-// BOH sees every tab but writes nowhere, Housekeeping only sees/writes HK.
+// BOH sees every tab but writes only to Maintenance, Housekeeping only
+// sees/writes HK and Maintenance. Maintenance is open to every role.
 var ROLE_CAPS = {
-    "Admin":        { tabs: ["update", "inhouse", "content", "hk", "users"], write: ["update", "content", "hk", "users"] },
-    "Front Desk":   { tabs: ["update", "inhouse", "content"], write: ["update", "content"] },
-    "Housekeeping": { tabs: ["hk"], write: ["hk"] },
-    "BOH":          { tabs: ["update", "inhouse", "content", "hk", "users"], write: [] }
+    "Admin":        { tabs: ["update", "inhouse", "content", "hk", "maintenance", "users"], write: ["update", "content", "hk", "maintenance", "users"] },
+    "Front Desk":   { tabs: ["update", "inhouse", "content", "maintenance"], write: ["update", "content", "maintenance"] },
+    "Housekeeping": { tabs: ["hk", "maintenance"], write: ["hk", "maintenance"] },
+    "BOH":          { tabs: ["update", "inhouse", "content", "hk", "maintenance", "users"], write: ["maintenance"] }
 };
 
 function canSeeTab(tab) {
@@ -32,6 +33,7 @@ function init() {
     wireLogin();
     wireDashboard();
     wireOverwriteModal();
+    wireEditUserModal();
     restoreSession();
 }
 
@@ -136,6 +138,8 @@ function applyWritePermissions() {
 
     document.getElementById("hk-update-form").classList.toggle("hidden", !canWrite("hk"));
 
+    document.getElementById("maint-raise-form").classList.toggle("hidden", !canWrite("maintenance"));
+
     document.getElementById("add-user-form").classList.toggle("hidden", !canWrite("users"));
 }
 
@@ -160,6 +164,8 @@ function wireDashboard() {
     document.getElementById("promo-file-input").addEventListener("change", onPromoFileSelected);
     document.getElementById("refresh-hk").addEventListener("click", loadHousekeeping);
     document.getElementById("hk-update-form").addEventListener("submit", onHkUpdateSubmit);
+    document.getElementById("refresh-maint").addEventListener("click", loadMaintenance);
+    document.getElementById("maint-raise-form").addEventListener("submit", onMaintRaiseSubmit);
 }
 
 function switchTab(name) {
@@ -173,6 +179,7 @@ function switchTab(name) {
     if (name === "users") loadUsers();
     if (name === "content") loadPromos();
     if (name === "hk") loadHousekeeping();
+    if (name === "maintenance") loadMaintenance();
 }
 
 /* ----- Update tab ----- */
@@ -448,24 +455,80 @@ function onDeletePromo(id) {
 function loadUsers() {
     if (!session || !canSeeTab("users")) return;
     var tbody = document.getElementById("users-tbody");
-    tbody.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="muted">Loading…</td></tr>';
 
     apiGet({ action: "listUsers", token: session.token }).then(function (res) {
         if (!res.ok) {
-            tbody.innerHTML = '<tr><td colspan="3" class="status error">' + escapeHtml(res.error || "Could not load users") + "</td></tr>";
+            tbody.innerHTML = '<tr><td colspan="4" class="status error">' + escapeHtml(res.error || "Could not load users") + "</td></tr>";
             return;
         }
         if (res.users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="muted">No users yet</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="muted">No users yet</td></tr>';
             return;
         }
+        var editable = canWrite("users");
         tbody.innerHTML = res.users.map(function (u) {
             return "<tr><td>" + escapeHtml(u.username) + "</td><td>" + escapeHtml(u.role) +
-                "</td><td>" + escapeHtml(formatDate(u.createdAt)) + "</td></tr>";
+                "</td><td>" + escapeHtml(formatDate(u.createdAt)) + '</td><td class="row-actions">' +
+                (editable ? '<button type="button" class="row-btn user-edit-btn" data-username="' + escapeHtml(u.username) +
+                    '" data-role="' + escapeHtml(u.role) + '">Edit</button>' : "") + "</td></tr>";
         }).join("");
+
+        tbody.querySelectorAll(".user-edit-btn").forEach(function (btn) {
+            btn.addEventListener("click", function () { openEditUserModal(btn.dataset.username, btn.dataset.role); });
+        });
     }).catch(function () {
-        tbody.innerHTML = '<tr><td colspan="3" class="status error">Network error</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="status error">Network error</td></tr>';
     });
+}
+
+/* ----- Edit user modal (admin only) ----- */
+var editingUsername = null;
+
+function wireEditUserModal() {
+    document.getElementById("edit-user-cancel").addEventListener("click", closeEditUserModal);
+    document.getElementById("edit-user-form").addEventListener("submit", onEditUserSubmit);
+}
+
+function openEditUserModal(username, role) {
+    editingUsername = username;
+    document.getElementById("edit-user-name").textContent = username;
+    document.getElementById("eu-role").value = role;
+    document.getElementById("eu-password").value = "";
+    setStatus(document.getElementById("edit-user-status"), "", "");
+    document.getElementById("edit-user-modal").classList.remove("hidden");
+}
+
+function closeEditUserModal() {
+    document.getElementById("edit-user-modal").classList.add("hidden");
+    editingUsername = null;
+}
+
+function onEditUserSubmit(e) {
+    e.preventDefault();
+    var statusEl = document.getElementById("edit-user-status");
+    var saveBtn = document.getElementById("edit-user-save");
+    var body = {
+        action: "updateUser",
+        token: session.token,
+        username: editingUsername,
+        role: document.getElementById("eu-role").value
+    };
+    var password = document.getElementById("eu-password").value;
+    if (password) body.newPassword = password;
+
+    setStatus(statusEl, "Saving…", "");
+    saveBtn.disabled = true;
+    apiPost(body).then(function (res) {
+        if (res.ok) {
+            closeEditUserModal();
+            setStatus(document.getElementById("add-user-status"), "User updated", "ok");
+            loadUsers();
+        } else {
+            setStatus(statusEl, res.error || "Could not update user", "error");
+        }
+    }).catch(function () { setStatus(statusEl, "Network error — try again", "error"); })
+        .finally(function () { saveBtn.disabled = false; });
 }
 
 function onAddUserSubmit(e) {
@@ -555,6 +618,101 @@ function onHkUpdateSubmit(e) {
             setStatus(statusEl, "Room " + roomNo + " updated", "ok");
             document.getElementById("hk-update-form").reset();
             loadHousekeeping();
+        } else {
+            setStatus(statusEl, res.error || "Update failed", "error");
+        }
+    }).catch(function () { setStatus(statusEl, "Network error — try again", "error"); });
+}
+
+/* ----- Maintenance tab ----- */
+function loadMaintenance() {
+    var ticketsBody = document.getElementById("maint-tickets-tbody");
+    var logBody = document.getElementById("maint-log-tbody");
+    ticketsBody.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+    logBody.innerHTML = "";
+
+    apiGet({ action: "listMaintenance", token: session.token }).then(function (res) {
+        if (!res.ok) {
+            ticketsBody.innerHTML = '<tr><td colspan="6" class="status error">' + escapeHtml(res.error || "Could not load maintenance tickets") + "</td></tr>";
+            return;
+        }
+        renderMaintTickets(res.tickets || []);
+        renderMaintLog(res.log || []);
+    }).catch(function () {
+        ticketsBody.innerHTML = '<tr><td colspan="6" class="status error">Network error</td></tr>';
+    });
+}
+
+function renderMaintTickets(tickets) {
+    var tbody = document.getElementById("maint-tickets-tbody");
+    if (tickets.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">No tickets yet</td></tr>';
+        return;
+    }
+    var writable = canWrite("maintenance");
+    tbody.innerHTML = tickets.map(function (t) {
+        // Open -> In Progress -> Resolved; a resolved ticket has no further action.
+        var actions = "";
+        if (writable && t.status !== "Resolved") {
+            var id = escapeHtml(t.ticketId);
+            if (t.status !== "In Progress") {
+                actions += '<button type="button" class="row-btn maint-action-btn" data-id="' + id + '" data-status="In Progress">In Progress</button>';
+            }
+            actions += '<button type="button" class="row-btn maint-action-btn" data-id="' + id + '" data-status="Resolved">Resolve</button>';
+        }
+        return "<tr><td>" + escapeHtml(t.location) + "</td><td>" + escapeHtml(t.issue) + "</td><td>" +
+            escapeHtml(t.status) + "</td><td>" + escapeHtml(t.updatedBy) + "</td><td>" +
+            escapeHtml(formatDateTime(t.updatedAt)) + '</td><td class="row-actions">' + actions + "</td></tr>";
+    }).join("");
+
+    tbody.querySelectorAll(".maint-action-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () { onMaintAction(btn.dataset.id, btn.dataset.status); });
+    });
+}
+
+function renderMaintLog(entries) {
+    var tbody = document.getElementById("maint-log-tbody");
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted">No activity yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = entries.map(function (e) {
+        return "<tr><td>" + escapeHtml(e.location) + "</td><td>" + escapeHtml(e.issue) + "</td><td>" +
+            escapeHtml(e.status) + "</td><td>" + escapeHtml(e.updatedBy) + "</td><td>" +
+            escapeHtml(formatDateTime(e.timestamp)) + "</td></tr>";
+    }).join("");
+}
+
+function onMaintRaiseSubmit(e) {
+    e.preventDefault();
+    var statusEl = document.getElementById("maint-status");
+    var body = {
+        action: "createMaintenanceTicket",
+        token: session.token,
+        location: document.getElementById("maint-location").value.trim(),
+        issue: document.getElementById("maint-issue").value.trim()
+    };
+    if (!body.location || !body.issue) return;
+
+    setStatus(statusEl, "Saving…", "");
+    apiPost(body).then(function (res) {
+        if (res.ok) {
+            setStatus(statusEl, "Ticket raised", "ok");
+            document.getElementById("maint-raise-form").reset();
+            loadMaintenance();
+        } else {
+            setStatus(statusEl, res.error || "Could not raise ticket", "error");
+        }
+    }).catch(function () { setStatus(statusEl, "Network error — try again", "error"); });
+}
+
+function onMaintAction(ticketId, status) {
+    var statusEl = document.getElementById("maint-status");
+    setStatus(statusEl, "Saving…", "");
+    apiPost({ action: "updateMaintenanceTicket", token: session.token, ticketId: ticketId, status: status }).then(function (res) {
+        if (res.ok) {
+            setStatus(statusEl, "Ticket updated", "ok");
+            loadMaintenance();
         } else {
             setStatus(statusEl, res.error || "Update failed", "error");
         }

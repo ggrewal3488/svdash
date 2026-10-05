@@ -32,6 +32,7 @@
  *   GET  ?action=listMaintenance&token=...  -> current status per ticket + recent log entries
  *   POST { action: 'login', ... }
  *   POST { action: 'createUser', ... }     -> admin only
+ *   POST { action: 'updateUser', username, role?, newPassword?, token } -> admin only, change a role and/or reset a password
  *   POST { action: 'pushPromo', imageBase64, mimeType, filename, token? } -> add a promo image (max 5 active)
  *   POST { action: 'deletePromo', id, token? } -> remove a promo image
  *   POST { action: 'updateHousekeeping', roomNo, status, notes?, token } -> Admin/Housekeeping only, appends to the log
@@ -159,6 +160,8 @@ function doPost(e) {
         return json_(login_(body.username, body.password));
       case 'createUser':
         return json_(createUser_(body));
+      case 'updateUser':
+        return json_(updateUser_(body));
       case 'pushPromo':
         return json_(pushPromo_(body));
       case 'deletePromo':
@@ -428,6 +431,45 @@ function createUser_(body) {
   }
 
   sheet.appendRow([username, hashPassword_(password), role, new Date().toISOString()]);
+  return { ok: true };
+}
+
+/**
+ * Admin edit of an existing account: a new role, a new password, or both
+ * (whichever of role / newPassword is sent). The username is the key and
+ * can't be changed here. A role change only reaches that user's next login
+ * -- their current token keeps its old role until it expires.
+ */
+function updateUser_(body) {
+  var admin = requireAdmin_(body.token);
+  if (!admin.ok) return admin;
+
+  var username = String(body.username || '').trim();
+  if (!username) return { ok: false, error: 'username is required' };
+
+  var role = body.role;
+  var password = body.newPassword || '';
+  if (!role && !password) return { ok: false, error: 'Nothing to update' };
+  if (role && ROLES.indexOf(role) === -1) return { ok: false, error: 'Role must be one of: ' + ROLES.join(', ') };
+  if (password && String(password).length < 6) return { ok: false, error: 'Password must be at least 6 characters' };
+
+  var sheet = usersSheet_();
+  var data = sheet.getDataRange().getValues();
+  var rowIndex = -1, adminCount = 0;
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeRole_(data[i][2]) === 'Admin') adminCount++;
+    if (String(data[i][0]).trim().toLowerCase() === username.toLowerCase()) rowIndex = i;
+  }
+  if (rowIndex === -1) return { ok: false, error: 'User not found' };
+
+  // Never leave the property without an Admin -- nobody else can create or
+  // edit users, so that would lock the Users tab for good.
+  if (role && role !== 'Admin' && normalizeRole_(data[rowIndex][2]) === 'Admin' && adminCount <= 1) {
+    return { ok: false, error: 'Cannot change the role of the only Admin' };
+  }
+
+  if (password) sheet.getRange(rowIndex + 1, 2).setValue(hashPassword_(password));
+  if (role) sheet.getRange(rowIndex + 1, 3).setValue(role);
   return { ok: true };
 }
 
