@@ -73,7 +73,10 @@ class InHouseFragment : Fragment() {
 
     private fun loadData() {
         val client = OkHttpClient()
-        val request = Request.Builder().url(API_URL).get().build()
+        // Token alongside the device key -- either satisfies the room gate,
+        // and a local build has an empty DEVICE_KEY.
+        val url = API_URL + (Session.token?.let { "&token=$it" } ?: "")
+        val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import okhttp3.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
@@ -134,12 +135,19 @@ class UpdateFragment : Fragment() {
         })
     }
 
-    /** Reads the room back and checks the pushed name is really stored. */
+    /**
+     * Reads the room back and checks the pushed name is really stored. The
+     * login token goes along with the device key: either one satisfies
+     * isAuthorizedRoomRequest_(), and a local build has an empty DEVICE_KEY.
+     */
     private fun verifySaved(client: OkHttpClient, roomNo: String, lastName: String, onDone: () -> Unit) {
-        val request = Request.Builder()
-            .url("$apiUrl?room=$roomNo&key=${BuildConfig.DEVICE_KEY}&t=${System.currentTimeMillis()}")
-            .get()
+        val url = apiUrl.toHttpUrl().newBuilder()
+            .addQueryParameter("room", roomNo)
+            .addQueryParameter("key", BuildConfig.DEVICE_KEY)
+            .addQueryParameter("t", System.currentTimeMillis().toString())
+            .apply { Session.token?.let { addQueryParameter("token", it) } }
             .build()
+        val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -148,6 +156,12 @@ class UpdateFragment : Fragment() {
 
             override fun onResponse(call: Call, response: Response) {
                 val body = response.use { it.body?.string() } ?: ""
+                // A refused read-back says nothing about whether the push
+                // landed -- don't report it as a failed save.
+                if (body.contains("Unauthorized")) {
+                    report("Room $roomNo pushed, but the read-back was refused — device key mismatch", onDone)
+                    return
+                }
                 val saved = lastName.isEmpty() || body.contains(lastName, ignoreCase = true)
                 if (saved) {
                     report("Room $roomNo saved — TV refreshes within a minute", onDone)
