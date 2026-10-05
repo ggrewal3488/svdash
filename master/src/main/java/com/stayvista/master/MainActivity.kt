@@ -4,11 +4,21 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.google.android.material.tabs.TabLayout
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONObject
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
+
+    private val apiUrl = "https://script.google.com/macros/s/AKfycbxRb032fWp2LCcF0EDWJ-AcHVvUs_gRBD4obQsV14YE1Cf80DwEoqGpe21Njzku3R6vRQ/exec"
 
     private lateinit var tabs: List<String>
 
@@ -78,6 +88,45 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)
             .commit()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (Session.isLoggedIn()) verifySession()
+    }
+
+    /**
+     * The saved token outlives the server's 12-hour TOKEN_TTL_MS, and an
+     * expired one makes Code.gs reject every write (guest pushes included)
+     * while the dashboard still looks logged in. Ask the server each time the
+     * app comes to the foreground; a network failure proves nothing, so only
+     * an explicit { ok: false } sends the user back to the login screen.
+     */
+    private fun verifySession() {
+        val token = Session.token ?: return
+        val request = Request.Builder().url("$apiUrl?action=verify&token=$token").get().build()
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {}
+
+            override fun onResponse(call: Call, response: Response) {
+                val body = response.use { it.body?.string() } ?: ""
+                val rejected = try {
+                    val json = JSONObject(body)
+                    json.has("ok") && !json.getBoolean("ok")
+                } catch (e: Exception) {
+                    false
+                }
+                if (rejected) runOnUiThread { onSessionExpired() }
+            }
+        })
+    }
+
+    /** Drops the saved session and returns to the login screen. */
+    fun onSessionExpired() {
+        if (isFinishing) return
+        Toast.makeText(this, "Session expired — please sign in again", Toast.LENGTH_LONG).show()
+        Session.clear(this)
+        goToLogin()
     }
 
     private fun goToLogin() {

@@ -103,11 +103,31 @@ class UpdateFragment : Fragment() {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                response.use {
+                val respBody = response.use {
                     if (!it.isSuccessful) {
                         report("Server error: ${it.code}", onDone)
                         return
                     }
+                    it.body?.string() ?: ""
+                }
+                // pushGuest_ answers 200 with { ok: false, error } when it
+                // rejects the push -- most often a saved login token past its
+                // 12-hour expiry, which sends the user back to log in. Show
+                // any other reason instead of falling through to the generic
+                // "did not save" from the read-back.
+                val error = try {
+                    val json = JSONObject(respBody)
+                    if (json.optBoolean("ok", true)) null else json.optString("error", "unknown error")
+                } catch (e: Exception) {
+                    null
+                }
+                if (error != null) {
+                    if (error.contains("session", ignoreCase = true)) {
+                        activity?.runOnUiThread { (activity as? MainActivity)?.onSessionExpired() }
+                    } else {
+                        report("Push rejected for room $roomNo: $error", onDone)
+                    }
+                    return
                 }
                 verifySaved(client, roomNo, lastName, onDone)
             }
